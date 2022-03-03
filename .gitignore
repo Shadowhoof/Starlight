@@ -1,0 +1,13 @@
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+.vs/
+Content/*
+**/*_BuiltData.uasset
+!Content/Starlight/
+Plugins/
+.idea/
+Starlight.sln
+Starlight.uproject
+Starlight.sln.DotSettings.user
