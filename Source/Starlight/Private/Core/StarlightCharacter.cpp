@@ -3,12 +3,15 @@
 
 #include "MotionControllerComponent.h"
 #include "Camera/CameraComponent.h"
-#include "DrawDebugHelpers.h"
 #include "IXRTrackingSystem.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Grab/MotionControllerGrabDevice.h"
+#include "Grab/TraceGrabDevice.h"
+#include "Movement/TeleportComponent.h"
+#include "Statics/StarlightStatics.h"
 
 
-namespace TraceConstants
+namespace TeleportConstants
 {
 	const float TeleportTraceDistance = 100000.f;
 	const float HitLocationOffset = 50.f;
@@ -17,8 +20,6 @@ namespace TraceConstants
 
 AStarlightCharacter::AStarlightCharacter()
 {
-	PrimaryActorTick.bCanEverTick = true;
-
 	CameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("CameraComponent"));
 	CameraComponent->bLockToHmd = true;
 	CameraComponent->SetupAttachment(RootComponent);
@@ -33,6 +34,8 @@ AStarlightCharacter::AStarlightCharacter()
 	RightController->SetRelativeScale3D(MirroredScale);
 	RightController->SetTrackingSource(EControllerHand::Right);
 	RightController->SetupAttachment(RootComponent);
+
+	TeleportComponent = CreateDefaultSubobject<UTeleportComponent>(TEXT("TeleportComponent"));
 }
 
 void AStarlightCharacter::BeginPlay()
@@ -46,13 +49,35 @@ void AStarlightCharacter::BeginPlay()
 		return;
 	}
 	
-	if (!IsHMDActive())
+	if (UStarlightStatics::IsHMDActive())
+	{
+		TeleportComponent->SetTeleportController(LeftController);
+	}
+	else
 	{
 		CameraComponent->bUsePawnControlRotation = true;
 		bUseControllerRotationYaw = true;
 	}
 
 	SnapTurnDegreesWithScale = SnapTurnDegrees / PlayerController->InputYawScale;
+
+	// initialize grab devices
+	if (UStarlightStatics::IsHMDActive())
+	{
+		UMotionControllerGrabDevice* LeftGrabDevice = NewObject<UMotionControllerGrabDevice>(this);
+		LeftGrabDevice->Initialize(LeftController);
+		GrabDevices.Add(EControllerHand::Left, LeftGrabDevice);
+
+		UMotionControllerGrabDevice* RightGrabDevice = NewObject<UMotionControllerGrabDevice>(this);
+		RightGrabDevice->Initialize(RightController);
+		GrabDevices.Add(EControllerHand::Right, RightGrabDevice);
+	}
+	else
+	{
+		UTraceGrabDevice* TraceGrabDevice = NewObject<UTraceGrabDevice>(this);
+		TraceGrabDevice->Initialize(this);
+		GrabDevices.Add(EControllerHand::Special_1, TraceGrabDevice);
+	}
 }
 
 void AStarlightCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -64,25 +89,27 @@ void AStarlightCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	PlayerInputComponent->BindAxis("MoveForward", this, &AStarlightCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &AStarlightCharacter::MoveRight);
 
-	PlayerInputComponent->BindAction("Teleport", IE_Pressed, this, &AStarlightCharacter::StartTeleport);
-	PlayerInputComponent->BindAction("Teleport", IE_Released, this, &AStarlightCharacter::FinishTeleport);
-	PlayerInputComponent->BindAction("CancelTeleport", IE_Pressed, this, &AStarlightCharacter::CancelTeleport);
+	DECLARE_DELEGATE_OneParam(FGrabDelegate, EControllerHand)
+	PlayerInputComponent->BindAction<FGrabDelegate>("GrabLeft", IE_Pressed, this, &AStarlightCharacter::Grab, EControllerHand::Left);
+	PlayerInputComponent->BindAction<FGrabDelegate>("GrabLeft", IE_Released, this, &AStarlightCharacter::ReleaseGrab, EControllerHand::Left);
+	PlayerInputComponent->BindAction<FGrabDelegate>("GrabRight", IE_Pressed, this, &AStarlightCharacter::Grab, EControllerHand::Right);
+	PlayerInputComponent->BindAction<FGrabDelegate>("GrabRight", IE_Released, this, &AStarlightCharacter::ReleaseGrab, EControllerHand::Right);
+	PlayerInputComponent->BindAction<FGrabDelegate>("GrabSpecial", IE_Pressed, this, &AStarlightCharacter::Grab, EControllerHand::Special_1);
+	PlayerInputComponent->BindAction<FGrabDelegate>("GrabSpecial", IE_Released, this, &AStarlightCharacter::ReleaseGrab, EControllerHand::Special_1);
 
 	DECLARE_DELEGATE_OneParam(FSnapTurnDelegate, float)
 	PlayerInputComponent->BindAction<FSnapTurnDelegate>("SnapTurnLeft", IE_Pressed, this, &AStarlightCharacter::SnapTurn, -1.f);
 	PlayerInputComponent->BindAction<FSnapTurnDelegate>("SnapTurnRight", IE_Pressed, this, &AStarlightCharacter::SnapTurn, 1.f);
 }
 
-void AStarlightCharacter::Tick(float DeltaSeconds)
+TObjectPtr<APlayerController> AStarlightCharacter::GetPlayerController() const
 {
-	Super::Tick(DeltaSeconds);
-
-	UpdateTeleport();
+	return PlayerController;
 }
 
-bool AStarlightCharacter::IsHMDActive()
+TObjectPtr<UCameraComponent> AStarlightCharacter::GetCameraComponent() const
 {
-	return GEngine->XRSystem.IsValid() && GEngine->XRSystem->IsHeadTrackingAllowed();
+	return CameraComponent;
 }
 
 void AStarlightCharacter::LookUp(const float Rate)
@@ -102,15 +129,22 @@ void AStarlightCharacter::SnapTurn(const float Sign)
 
 void AStarlightCharacter::MoveForward(const float Rate)
 {
-	if (!IsHMDActive() || VRMovementType == EVRMovementType::Continuous)
+	switch (MovementType)
 	{
+	case EMovementType::Continuous:
 		AddMovementInput(GetMovementForwardVector(), Rate);
+		break;
+	case EMovementType::Teleport:
+		TeleportComponent->MoveYAxis(Rate);
+		break;
+	default:
+		break;
 	}
 }
 
 void AStarlightCharacter::MoveRight(const float Rate)
 {
-	if (!IsHMDActive() || VRMovementType == EVRMovementType::Continuous)
+	if (MovementType == EMovementType::Continuous)
 	{
 		AddMovementInput(GetMovementRightVector(), Rate);	
 	}
@@ -118,7 +152,7 @@ void AStarlightCharacter::MoveRight(const float Rate)
 
 FVector AStarlightCharacter::GetMovementForwardVector() const
 {
-	if (!IsHMDActive())
+	if (!UStarlightStatics::IsHMDActive())
 	{
 		return GetActorForwardVector();
 	}
@@ -129,7 +163,7 @@ FVector AStarlightCharacter::GetMovementForwardVector() const
 
 FVector AStarlightCharacter::GetMovementRightVector() const
 {
-	if (!IsHMDActive())
+	if (!UStarlightStatics::IsHMDActive())
 	{
 		return GetActorRightVector();
 	}
@@ -138,67 +172,21 @@ FVector AStarlightCharacter::GetMovementRightVector() const
 	return AverageDirection.GetSafeNormal2D();
 }
 
-void AStarlightCharacter::StartTeleport()
+void AStarlightCharacter::Grab(EControllerHand Hand)
 {
-	if (!bIsTeleporting)
+	TObjectPtr<UGrabDevice>* GrabDevicePtr = GrabDevices.Find(Hand);
+	if (GrabDevicePtr)
 	{
-		bIsTeleporting = true;
+		GrabDevicePtr->Get()->TryGrabbing();
 	}
 }
 
-void AStarlightCharacter::FinishTeleport()
+void AStarlightCharacter::ReleaseGrab(EControllerHand Hand)
 {
-	if (bIsTeleporting)
+	TObjectPtr<UGrabDevice>* GrabDevicePtr = GrabDevices.Find(Hand);
+	if (GrabDevicePtr)
 	{
-		FHitResult HitResult;
-		TraceTeleport(HitResult);
-		if (HitResult.IsValidBlockingHit())
-		{
-			FRotator DestDirection = (HitResult.Location - GetActorLocation()).Rotation();
-			DestDirection.Pitch = 0.f;
-			TeleportTo(HitResult.Location, DestDirection);
-		}
-		
-		bIsTeleporting = false;
-	}
-}
-
-void AStarlightCharacter::CancelTeleport()
-{
-	if (bIsTeleporting)
-	{
-		bIsTeleporting = false;
-	}
-}
-
-void AStarlightCharacter::UpdateTeleport()
-{
-	if (!bIsTeleporting)
-	{
-		return;
-	}
-
-	FHitResult HitResult;
-	TraceTeleport(HitResult);
-	if (HitResult.IsValidBlockingHit())
-	{
-		DrawDebugSphere(GetWorld(), HitResult.Location, 50.f, 16, FColor::Red);
-	}
-}
-
-void AStarlightCharacter::TraceTeleport(FHitResult& OutHit)
-{
-	const FVector StartPoint = IsHMDActive() ? LeftController->GetComponentLocation() : CameraComponent->GetComponentLocation();
-	const FVector Direction = IsHMDActive() ? LeftController->GetComponentRotation().Vector() : CameraComponent->GetComponentRotation().Vector();
-	const FVector EndPoint = StartPoint + Direction * TraceConstants::TeleportTraceDistance;
-	
-	FCollisionQueryParams QueryParams;
-	QueryParams.AddIgnoredActor(this);
-	GetWorld()->LineTraceSingleByChannel(OutHit, StartPoint, EndPoint, ECC_WorldStatic, QueryParams);
-
-	if (OutHit.IsValidBlockingHit())
-	{
-		OutHit.Location += OutHit.Normal * TraceConstants::HitLocationOffset;
+		GrabDevicePtr->Get()->Release();
 	}
 }
 

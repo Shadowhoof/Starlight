@@ -6,13 +6,15 @@
 #include "GameFramework/Character.h"
 #include "StarlightCharacter.generated.h"
 
+class UTeleportComponent;
 class UCapsuleComponent;
 class UMotionControllerComponent;
 class UCameraComponent;
+class UGrabDevice;
 
 
 UENUM(BlueprintType)
-enum class EVRMovementType : uint8
+enum class EMovementType : uint8
 {
 	/** Aim with motion controllers to select a location to teleport to */
 	Teleport,
@@ -33,53 +35,64 @@ public:
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	virtual void Tick(float DeltaSeconds) override;
+	TObjectPtr<APlayerController> GetPlayerController() const;
+
+	TObjectPtr<UCameraComponent> GetCameraComponent() const;
+
+	/**
+	 *	Gets forward vector that can be used for movement. With motion controllers movement forward vector
+	 *	can differ from actor forward vector.
+	 */
+	FVector GetMovementForwardVector() const;
+
+	/**
+	 *	Gets right vector that can be used for movement. With motion controllers movement right vector
+	 *	can differ from actor right vector.
+	 */
+	FVector GetMovementRightVector() const;
 	
 protected:
 	
 	virtual void BeginPlay() override;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Camera")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
 	TObjectPtr<UCameraComponent> CameraComponent;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "MotionControls")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MotionControls")
 	TObjectPtr<UMotionControllerComponent> LeftController;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "MotionControls")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MotionControls")
 	TObjectPtr<UMotionControllerComponent> RightController;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
+	TObjectPtr<UTeleportComponent> TeleportComponent;
+	
 	/** Yaw change in degrees whenever snap turn is performed */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement")
 	float SnapTurnDegrees = 45.f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement")
-	EVRMovementType VRMovementType = EVRMovementType::Continuous;
+	EMovementType MovementType = EMovementType::Continuous;
 
+	UPROPERTY(Transient)
 	TObjectPtr<APlayerController> PlayerController;
 	
 private:
 
-	bool bIsTeleporting = false;
-
 	float SnapTurnDegreesWithScale = 0.f;
+
+	UPROPERTY(Transient)
+	TMap<EControllerHand, TObjectPtr<UGrabDevice>> GrabDevices;
 	
 private:
 
-	static bool IsHMDActive();
-	
 	void LookUp(const float Rate);
 	void LookRight(const float Rate);
 	void SnapTurn(const float Sign);
 
 	void MoveForward(const float Rate);
 	void MoveRight(const float Rate);
-	FVector GetMovementForwardVector() const;
-	FVector GetMovementRightVector() const;
-	
-	void StartTeleport();
-	void FinishTeleport();
-	void CancelTeleport();
-	void UpdateTeleport();
-	void TraceTeleport(FHitResult& OutHit);
 
+	void Grab(EControllerHand Hand);
+	void ReleaseGrab(EControllerHand Hand);
 };
