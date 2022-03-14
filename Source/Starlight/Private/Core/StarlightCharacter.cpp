@@ -8,6 +8,8 @@
 #include "Grab/MotionControllerGrabDevice.h"
 #include "Grab/TraceGrabDevice.h"
 #include "Movement/TeleportComponent.h"
+#include "Portal/PortalConstants.h"
+#include "Portal/PortalGunComponent.h"
 #include "Statics/StarlightStatics.h"
 
 
@@ -36,6 +38,7 @@ AStarlightCharacter::AStarlightCharacter()
 	RightController->SetupAttachment(RootComponent);
 
 	TeleportComponent = CreateDefaultSubobject<UTeleportComponent>(TEXT("TeleportComponent"));
+	PortalGunComponent = CreateDefaultSubobject<UPortalGunComponent>(TEXT("PortalGunComponent"));
 }
 
 void AStarlightCharacter::BeginPlay()
@@ -98,6 +101,10 @@ void AStarlightCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	DECLARE_DELEGATE_OneParam(FSnapTurnDelegate, float)
 	PlayerInputComponent->BindAction<FSnapTurnDelegate>("SnapTurnLeft", IE_Pressed, this, &AStarlightCharacter::SnapTurn, -1.f);
 	PlayerInputComponent->BindAction<FSnapTurnDelegate>("SnapTurnRight", IE_Pressed, this, &AStarlightCharacter::SnapTurn, 1.f);
+
+	DECLARE_DELEGATE_OneParam(FShootPortalDelegate, EPortalType)
+	PlayerInputComponent->BindAction<FShootPortalDelegate>("ShootPortalOne", IE_Pressed, this, &AStarlightCharacter::ShootPortal, EPortalType::First);
+	PlayerInputComponent->BindAction<FShootPortalDelegate>("ShootPortalTwo", IE_Pressed, this, &AStarlightCharacter::ShootPortal, EPortalType::Second);
 }
 
 TObjectPtr<APlayerController> AStarlightCharacter::GetPlayerController() const
@@ -122,7 +129,7 @@ void AStarlightCharacter::LookRight(const float Rate)
 
 void AStarlightCharacter::SnapTurn(const float Sign)
 {
-	AddControllerYawInput(Sign * SnapTurnDegreesWithScale);			
+	AddControllerYawInput(Sign * SnapTurnDegrees);			
 }
 
 void AStarlightCharacter::MoveForward(const float Rate)
@@ -186,5 +193,13 @@ void AStarlightCharacter::ReleaseGrab(EControllerHand Hand)
 	{
 		GrabDevicePtr->Get()->Release();
 	}
+}
+
+void AStarlightCharacter::ShootPortal(EPortalType PortalType)
+{
+	FVector EyesLocation;
+	FRotator EyesRotation;
+	GetActorEyesViewPoint(EyesLocation, EyesRotation);
+	PortalGunComponent->ShootPortal(PortalType, EyesLocation, EyesRotation.Vector());
 }
 

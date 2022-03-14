@@ -6,6 +6,8 @@
 #include "GameFramework/Character.h"
 #include "StarlightCharacter.generated.h"
 
+enum class EPortalType : uint8;
+class UPortalGunComponent;
 class UTeleportComponent;
 class UCapsuleComponent;
 class UMotionControllerComponent;
@@ -66,6 +68,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
 	TObjectPtr<UTeleportComponent> TeleportComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Portal")
+	TObjectPtr<UPortalGunComponent> PortalGunComponent;
 	
 	/** Yaw change in degrees whenever snap turn is performed */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement")
@@ -93,4 +98,6 @@ private:
 
 	void Grab(EControllerHand Hand);
 	void ReleaseGrab(EControllerHand Hand);
+
+	void ShootPortal(EPortalType PortalType);
 };
