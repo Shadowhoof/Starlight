@@ -78,9 +78,7 @@ protected:
 	TObjectPtr<APlayerController> PlayerController;
 	
 private:
-
-	float SnapTurnDegreesWithScale = 0.f;
-
+	
 	UPROPERTY(Transient)
 	TMap<EControllerHand, TObjectPtr<UGrabDevice>> GrabDevices;
 	

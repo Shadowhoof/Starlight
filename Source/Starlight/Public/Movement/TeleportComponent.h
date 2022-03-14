@@ -7,6 +7,8 @@
 #include "TeleportComponent.generated.h"
 
 
+class ATeleportVisualizer;
+class AStaticMeshActor;
 class UMotionControllerComponent;
 struct FPredictProjectilePathResult;
 class AStarlightCharacter;
@@ -36,6 +38,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Teleport")
 	float TeleportActivationAxisThreshold = 0.7f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Teleport")
+	TSubclassOf<ATeleportVisualizer> VisualizerClass;
 	
 private:
 
@@ -44,6 +49,9 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UMotionControllerComponent> TeleportController;
+
+	UPROPERTY()
+	TObjectPtr<ATeleportVisualizer> TeleportVisualizer;
 	
 	bool bIsTeleporting = false;
 	bool bIsTeleportAxisOverThreshold = false;
@@ -52,7 +60,7 @@ private:
 	
 	void StartTeleport();
 	void FinishTeleport();
-	void UpdateTeleport(FPredictProjectilePathResult& OutPredictResult);
+	void UpdateTeleport(FPredictProjectilePathResult& OutPredictResult) const;
 	
 	
 };

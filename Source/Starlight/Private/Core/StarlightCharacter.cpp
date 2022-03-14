@@ -59,8 +59,6 @@ void AStarlightCharacter::BeginPlay()
 		bUseControllerRotationYaw = true;
 	}
 
-	SnapTurnDegreesWithScale = SnapTurnDegrees / PlayerController->InputYawScale;
-
 	// initialize grab devices
 	if (UStarlightStatics::IsHMDActive())
 	{
