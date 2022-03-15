@@ -6,6 +6,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/SceneCaptureComponent2D.h"
 #include "Engine/TextureRenderTarget2D.h"
+#include "GameFramework/Character.h"
 #include "Portal/PortalConstants.h"
 
 
@@ -20,7 +21,6 @@ APortal::APortal()
 	BorderMesh->SetupAttachment(RootComponent);
 
 	SceneCaptureComponent = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("SceneCaptureComponent"));
-	SceneCaptureComponent->SetRelativeRotation(FRotator(90.f, 0.f, 0.f));
 	SceneCaptureComponent->bCaptureEveryFrame = true;
 	SceneCaptureComponent->SetupAttachment(RootComponent);
 }
@@ -68,6 +68,17 @@ void APortal::SetRenderTargets(TObjectPtr<UTextureRenderTarget2D> ReadTarget,
 	
 	RenderTargetWrite = WriteTarget;
 	SceneCaptureComponent->TextureTarget = WriteTarget;
+}
+
+void APortal::UpdateSceneCaptureTransform(const FVector& RelativeLocation)
+{
+	const FTransform NewTransform = {RelativeLocation.Rotation(), FVector()};
+	SceneCaptureComponent->SetRelativeTransform(NewTransform);
+}
+
+FVector APortal::GetRelativeLocationTo(TObjectPtr<ACharacter> PlayerCharacter) const
+{
+	return GetActorTransform().InverseTransformPosition(PlayerCharacter->GetPawnViewLocation());
 }
 
 void APortal::BeginPlay()

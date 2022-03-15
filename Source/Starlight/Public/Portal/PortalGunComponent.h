@@ -22,6 +22,8 @@ public:
 
 	void ShootPortal(EPortalType PortalType, const FVector& StartLocation, const FVector& Direction);
 
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+	
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Portal")
 	TMap<EPortalType, TSubclassOf<APortal>> PortalClasses;
@@ -36,6 +38,9 @@ private:
 	UPROPERTY()
 	TMap<EPortalType, TObjectPtr<APortal>> ActivePortals;
 
+	UPROPERTY()
+	TObjectPtr<ACharacter> OwnerCharacter;
+	
 	bool ValidatePortalLocation(EPortalType PortalType, const FHitResult& HitResult, TObjectPtr<APortalSurface> Surface,
 	                            FVector& OutLocation, FVector& OutLocalCoords) const;
 

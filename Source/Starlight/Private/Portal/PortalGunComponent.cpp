@@ -3,6 +3,7 @@
 
 #include "Portal/PortalGunComponent.h"
 
+#include "GameFramework/Character.h"
 #include "Portal/Portal.h"
 #include "Portal/PortalSurface.h"
 
@@ -12,6 +13,8 @@ DEFINE_LOG_CATEGORY(LogPortal);
 
 UPortalGunComponent::UPortalGunComponent()
 {
+	PrimaryComponentTick.bCanEverTick = true;
+	
 	PortalClasses = {
 		{EPortalType::First, APortal::StaticClass()},
 		{EPortalType::Second, APortal::StaticClass()}
@@ -48,9 +51,7 @@ void UPortalGunComponent::ShootPortal(EPortalType PortalType, const FVector& Sta
 		return;
 	}
 
-	FRotator PortalRotation = HitResult.Normal.Rotation();
-	PortalRotation.Pitch -= 90.f;
-
+	FRotator PortalRotation = PortalSurface->GetActorRotation();
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 	TSubclassOf<APortal> PortalClass = PortalClasses[PortalType];
@@ -81,6 +82,22 @@ void UPortalGunComponent::ShootPortal(EPortalType PortalType, const FVector& Sta
 	}
 }
 
+void UPortalGunComponent::TickComponent(float DeltaTime, ELevelTick TickType,
+	FActorComponentTickFunction* ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	if (!ActivePortals[EPortalType::First] || !ActivePortals[EPortalType::Second])
+	{
+		return;
+	}
+
+	const TObjectPtr<APortal> FirstPortal = ActivePortals[EPortalType::First];
+	const TObjectPtr<APortal> SecondPortal = ActivePortals[EPortalType::Second];
+	FirstPortal->UpdateSceneCaptureTransform(SecondPortal->GetRelativeLocationTo(OwnerCharacter));
+	SecondPortal->UpdateSceneCaptureTransform(FirstPortal->GetRelativeLocationTo(OwnerCharacter));
+}
+
 void UPortalGunComponent::BeginPlay()
 {
 	Super::BeginPlay();
@@ -89,6 +106,8 @@ void UPortalGunComponent::BeginPlay()
 		{EPortalType::First, nullptr},
 		{EPortalType::Second, nullptr}
 	};
+
+	OwnerCharacter = Cast<ACharacter>(GetOwner());
 }
 
 bool UPortalGunComponent::ValidatePortalLocation(EPortalType PortalType, const FHitResult& HitResult,

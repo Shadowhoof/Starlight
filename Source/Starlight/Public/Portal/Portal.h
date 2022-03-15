@@ -36,6 +36,10 @@ public:
 	 *	@param WriteTarget render target that will be used as target for scene capture component
 	 */
 	void SetRenderTargets(TObjectPtr<UTextureRenderTarget2D> ReadTarget, TObjectPtr<UTextureRenderTarget2D> WriteTarget);
+
+	void UpdateSceneCaptureTransform(const FVector& RelativeLocation);
+
+	FVector GetRelativeLocationTo(TObjectPtr<ACharacter> PlayerCharacter) const;
 	
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Portal")
@@ -46,9 +50,6 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Portal")
 	TObjectPtr<USceneCaptureComponent2D> SceneCaptureComponent;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Portal")
-	TObjectPtr<UTexture2D> NoConnectedPortalTexture;
 
 protected:
 	virtual void BeginPlay() override;
