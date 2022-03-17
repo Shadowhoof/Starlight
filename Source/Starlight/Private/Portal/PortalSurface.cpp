@@ -3,7 +3,9 @@
 
 #include "Portal/PortalSurface.h"
 
+#include "Components/CapsuleComponent.h"
 #include "Portal/PortalConstants.h"
+#include "Statics/StarlightMacros.h"
 
 
 APortalSurface::APortalSurface()
@@ -27,6 +29,22 @@ FVector APortalSurface::GetExtents() const
 bool APortalSurface::CanFitPortal() const
 {
 	return bCanFitPortal;
+}
+
+void APortalSurface::SetCollisionEnabledForActor(const TObjectPtr<AActor> Actor, bool bIsEnabled)
+{
+	UE_LOG(LogPortal, Verbose, TEXT("Setting collision for portal surface %s and actor %s, enabled: %s"), *GetName(),
+	       *Actor->GetName(), BOOL_TO_STRING(bIsEnabled));
+
+	const bool bIgnoreCollision = !bIsEnabled;
+	StaticMeshComponent->IgnoreActorWhenMoving(Actor, bIgnoreCollision);
+
+	TInlineComponentArray<UPrimitiveComponent*> OtherActorComponents;
+	Actor->GetComponents<UPrimitiveComponent>(OtherActorComponents);
+	for (UPrimitiveComponent* Component : OtherActorComponents)
+	{
+		Component->IgnoreActorWhenMoving(this, bIgnoreCollision);
+	}
 }
 
 void APortalSurface::BeginPlay()

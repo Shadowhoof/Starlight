@@ -9,7 +9,7 @@
 #include "Grab/TraceGrabDevice.h"
 #include "Movement/TeleportComponent.h"
 #include "Portal/PortalConstants.h"
-#include "Portal/PortalGunComponent.h"
+#include "Portal/PortalComponent.h"
 #include "Statics/StarlightStatics.h"
 
 
@@ -38,7 +38,7 @@ AStarlightCharacter::AStarlightCharacter()
 	RightController->SetupAttachment(RootComponent);
 
 	TeleportComponent = CreateDefaultSubobject<UTeleportComponent>(TEXT("TeleportComponent"));
-	PortalGunComponent = CreateDefaultSubobject<UPortalGunComponent>(TEXT("PortalGunComponent"));
+	PortalComponent = CreateDefaultSubobject<UPortalComponent>(TEXT("PortalComponent"));
 }
 
 void AStarlightCharacter::BeginPlay()
@@ -177,6 +177,23 @@ FVector AStarlightCharacter::GetMovementRightVector() const
 	return AverageDirection.GetSafeNormal2D();
 }
 
+bool AStarlightCharacter::TeleportTo(const FVector& DestLocation, const FRotator& DestRotation, bool bIsATest,
+	bool bNoCheck)
+{
+	const FVector RelativeVelocity = GetActorRotation().UnrotateVector(GetCharacterMovement()->Velocity);
+	if (!Super::TeleportTo(DestLocation, FRotator(), bIsATest, bNoCheck))
+	{
+		return false;
+	}
+	
+	GetController()->SetControlRotation(DestRotation);
+	FaceRotation(DestRotation);
+
+	GetCharacterMovement()->Velocity = GetActorRotation().RotateVector(RelativeVelocity);
+
+	return true;
+}
+
 void AStarlightCharacter::Grab(EControllerHand Hand)
 {
 	TObjectPtr<UGrabDevice>* GrabDevicePtr = GrabDevices.Find(Hand);
@@ -200,6 +217,6 @@ void AStarlightCharacter::ShootPortal(EPortalType PortalType)
 	FVector EyesLocation;
 	FRotator EyesRotation;
 	GetActorEyesViewPoint(EyesLocation, EyesRotation);
-	PortalGunComponent->ShootPortal(PortalType, EyesLocation, EyesRotation.Vector());
+	PortalComponent->ShootPortal(PortalType, EyesLocation, EyesRotation.Vector());
 }
 

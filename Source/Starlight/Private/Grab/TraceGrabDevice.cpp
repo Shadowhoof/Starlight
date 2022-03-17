@@ -16,7 +16,7 @@ namespace TraceGrabConstants
 bool UTraceGrabDevice::TryGrabbing()
 {
 	FHitResult HitResult;
-	const FVector StartPoint = PlayerCharacter->GetActorLocation();
+	const FVector StartPoint = PlayerCharacter->GetPawnViewLocation();
 	const FVector EndPoint = StartPoint + PlayerCharacter->GetControlRotation().Vector() * TraceGrabConstants::GrabRange;
 
 	FCollisionQueryParams QueryParams;
@@ -27,7 +27,12 @@ bool UTraceGrabDevice::TryGrabbing()
 	{
 		if (TObjectPtr<IGrabbable> Grabbable = Cast<IGrabbable>(HitResult.GetActor()))
 		{
+			UE_LOG(LogGrab, VeryVerbose, TEXT("Grab trace has hit grabbable actor %s"), *HitResult.GetActor()->GetName());
 			return Grab(Grabbable);
+		}
+		else
+		{
+			UE_LOG(LogGrab, VeryVerbose, TEXT("Grab trace has hit non-grabbable actor %s"), *HitResult.GetActor()->GetName());
 		}
 	}
 

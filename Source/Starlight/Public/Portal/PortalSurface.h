@@ -22,6 +22,9 @@ public:
 	FVector GetExtents() const;
 
 	bool CanFitPortal() const;
+
+	/** Enables or disables surface collision with specific actor for portal teleportation */
+	void SetCollisionEnabledForActor(const TObjectPtr<AActor> Actor, bool bIsEnabled);
 	
 protected:
 

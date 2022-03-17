@@ -4,6 +4,7 @@
 #include "Grab/GrabDevice.h"
 
 #include "Grab/Grabbable.h"
+#include "Statics/StarlightMacros.h"
 
 DEFINE_LOG_CATEGORY(LogGrab);
 
@@ -24,11 +25,14 @@ bool UGrabDevice::Grab(TObjectPtr<IGrabbable> ObjectToGrab)
 	{
 		return false;
 	}
-	
+
 	const TObjectPtr<UPrimitiveComponent> GrabbedComponent = ObjectToGrab->GetAttachComponent();
 	GrabbedComponent->SetSimulatePhysics(false);
-	const bool bIsGrabbed = GrabbedComponent->AttachToComponent(GetComponentToAttachTo(), {EAttachmentRule::KeepWorld, false});
-	
+	const bool bIsGrabbed = GrabbedComponent->AttachToComponent(GetComponentToAttachTo(),
+	                                                            {EAttachmentRule::KeepWorld, false});
+	UE_LOG(LogGrab, Verbose, TEXT("Trying to grab actor %s, result: %s"), *GrabbedComponent->GetOwner()->GetName(),
+	       BOOL_TO_STRING(bIsGrabbed));
+
 	if (bIsGrabbed)
 	{
 		OnSuccessfulGrab(ObjectToGrab);

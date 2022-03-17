@@ -1,7 +1,7 @@
 ﻿// Shadowhoof Games, 2022
 
 
-#include "Portal/PortalGunComponent.h"
+#include "Portal/PortalComponent.h"
 
 #include "GameFramework/Character.h"
 #include "Portal/Portal.h"
@@ -11,7 +11,7 @@
 DEFINE_LOG_CATEGORY(LogPortal);
 
 
-UPortalGunComponent::UPortalGunComponent()
+UPortalComponent::UPortalComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
 	
@@ -26,7 +26,7 @@ UPortalGunComponent::UPortalGunComponent()
 	};
 }
 
-void UPortalGunComponent::ShootPortal(EPortalType PortalType, const FVector& StartLocation, const FVector& Direction)
+void UPortalComponent::ShootPortal(EPortalType PortalType, const FVector& StartLocation, const FVector& Direction)
 {
 	FHitResult HitResult;
 	const FVector EndLocation = StartLocation + Direction * PortalConstants::ShootRange;
@@ -74,6 +74,9 @@ void UPortalGunComponent::ShootPortal(EPortalType PortalType, const FVector& Sta
 	EPortalType OtherPortalType = GetOtherPortalType(PortalType);
 	if (const TObjectPtr<APortal> OtherPortal = ActivePortals[OtherPortalType])
 	{
+		Portal->SetConnectedPortal(OtherPortal);
+		OtherPortal->SetConnectedPortal(Portal);
+		
 		Portal->SetRenderTargets(RenderTargets[OtherPortalType], RenderTargets[PortalType]);
 		if (!bThisPortalExisted)
 		{
@@ -82,7 +85,7 @@ void UPortalGunComponent::ShootPortal(EPortalType PortalType, const FVector& Sta
 	}
 }
 
-void UPortalGunComponent::TickComponent(float DeltaTime, ELevelTick TickType,
+void UPortalComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
@@ -98,7 +101,7 @@ void UPortalGunComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	SecondPortal->UpdateSceneCaptureTransform(FirstPortal->GetRelativeLocationTo(OwnerCharacter));
 }
 
-void UPortalGunComponent::BeginPlay()
+void UPortalComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
@@ -110,7 +113,7 @@ void UPortalGunComponent::BeginPlay()
 	OwnerCharacter = Cast<ACharacter>(GetOwner());
 }
 
-bool UPortalGunComponent::ValidatePortalLocation(EPortalType PortalType, const FHitResult& HitResult,
+bool UPortalComponent::ValidatePortalLocation(EPortalType PortalType, const FHitResult& HitResult,
                                                  TObjectPtr<APortalSurface> Surface, FVector& OutLocation,
                                                  FVector& OutLocalCoords) const
 {
@@ -128,7 +131,7 @@ bool UPortalGunComponent::ValidatePortalLocation(EPortalType PortalType, const F
 	return !IsOverlappingWithOtherPortal(PortalType, Surface, OutLocalCoords);
 }
 
-bool UPortalGunComponent::IsOverlappingWithOtherPortal(EPortalType PortalType, TObjectPtr<APortalSurface> PortalSurface,
+bool UPortalComponent::IsOverlappingWithOtherPortal(EPortalType PortalType, TObjectPtr<APortalSurface> PortalSurface,
                                                        const FVector& LocalCoords) const
 {
 	const TObjectPtr<APortal> OtherPortal = ActivePortals[GetOtherPortalType(PortalType)];

@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "PortalConstants.h"
-#include "PortalGunComponent.generated.h"
+#include "PortalComponent.generated.h"
 
 
 class APortalSurface;
@@ -13,12 +13,12 @@ class APortal;
 
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
-class STARLIGHT_API UPortalGunComponent : public UActorComponent
+class STARLIGHT_API UPortalComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
 public:
-	UPortalGunComponent();
+	UPortalComponent();
 
 	void ShootPortal(EPortalType PortalType, const FVector& StartLocation, const FVector& Direction);
 

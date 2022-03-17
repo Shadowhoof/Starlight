@@ -7,7 +7,7 @@
 #include "StarlightCharacter.generated.h"
 
 enum class EPortalType : uint8;
-class UPortalGunComponent;
+class UPortalComponent;
 class UTeleportComponent;
 class UCapsuleComponent;
 class UMotionControllerComponent;
@@ -32,7 +32,6 @@ class STARLIGHT_API AStarlightCharacter : public ACharacter
 	GENERATED_BODY()
 
 public:
-	
 	AStarlightCharacter();
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -52,9 +51,11 @@ public:
 	 *	can differ from actor right vector.
 	 */
 	FVector GetMovementRightVector() const;
-	
+
+	virtual bool TeleportTo(const FVector& DestLocation, const FRotator& DestRotation, bool bIsATest = false,
+	                        bool bNoCheck = false) override;
+
 protected:
-	
 	virtual void BeginPlay() override;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
@@ -70,8 +71,8 @@ protected:
 	TObjectPtr<UTeleportComponent> TeleportComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Portal")
-	TObjectPtr<UPortalGunComponent> PortalGunComponent;
-	
+	TObjectPtr<UPortalComponent> PortalComponent;
+
 	/** Yaw change in degrees whenever snap turn is performed */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement")
 	float SnapTurnDegrees = 45.f;
@@ -81,14 +82,12 @@ protected:
 
 	UPROPERTY(Transient)
 	TObjectPtr<APlayerController> PlayerController;
-	
+
 private:
-	
 	UPROPERTY(Transient)
 	TMap<EControllerHand, TObjectPtr<UGrabDevice>> GrabDevices;
-	
-private:
 
+private:
 	void LookUp(const float Rate);
 	void LookRight(const float Rate);
 	void SnapTurn(const float Sign);
