@@ -6,6 +6,10 @@
 #include "UObject/Interface.h"
 #include "Grabbable.generated.h"
 
+
+DECLARE_LOG_CATEGORY_EXTERN(LogGrab, Log, All);
+
+
 UINTERFACE()
 class UGrabbable : public UInterface
 {

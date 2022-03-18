@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "GrabDevice.generated.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(LogGrab, Log, All);
 
 class IGrabbable;
 

@@ -4,11 +4,14 @@
 #include "Grab/Grabbable.h"
 
 
+DEFINE_LOG_CATEGORY(LogGrab);
+
+
 void IGrabbable::OnGrab()
 {
 	if (const AActor* AsActor = Cast<AActor>(this))
 	{
-		UE_LOG(LogTemp, Log, TEXT("Object %s grabbed"), *AsActor->GetName());
+		UE_LOG(LogGrab, Verbose, TEXT("Object %s grabbed"), *AsActor->GetName());
 	}
 }
 
@@ -16,7 +19,7 @@ void IGrabbable::OnRelease()
 {
 	if (const AActor* AsActor = Cast<AActor>(this))
 	{
-		UE_LOG(LogTemp, Log, TEXT("Object %s released"), *AsActor->GetName());
+		UE_LOG(LogGrab, Verbose, TEXT("Object %s released"), *AsActor->GetName());
 	}
 }
 

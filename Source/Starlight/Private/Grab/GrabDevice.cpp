@@ -6,8 +6,6 @@
 #include "Grab/Grabbable.h"
 #include "Statics/StarlightMacros.h"
 
-DEFINE_LOG_CATEGORY(LogGrab);
-
 
 TObjectPtr<IGrabbable> UGrabDevice::GetGrabbedObject() const
 {
