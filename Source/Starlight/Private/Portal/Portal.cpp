@@ -15,7 +15,7 @@
 APortal::APortal()
 {
 	PrimaryActorTick.bCanEverTick = true;
-	
+
 	PortalMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMeshComponent"));
 	PortalMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	RootComponent = PortalMesh;
@@ -25,6 +25,7 @@ APortal::APortal()
 
 	SceneCaptureComponent = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("SceneCaptureComponent"));
 	SceneCaptureComponent->bCaptureEveryFrame = true;
+	SceneCaptureComponent->bOverride_CustomNearClippingPlane = true;
 	SceneCaptureComponent->SetupAttachment(RootComponent);
 
 	CollisionBoxComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("CollisionBoxComponent"));
@@ -36,9 +37,9 @@ APortal::APortal()
 	CollisionBoxComponent->SetGenerateOverlapEvents(true);
 	CollisionBoxComponent->SetupAttachment(RootComponent);
 
-	BackFacingComponent = CreateDefaultSubobject<USceneComponent>(TEXT("BackFacingComponent"));
-	BackFacingComponent->SetRelativeRotation(FRotator(0.f, 180.f, 0.f));
-	BackFacingComponent->SetupAttachment(RootComponent);
+	BackfacingComponent = CreateDefaultSubobject<USceneComponent>(TEXT("BackFacingComponent"));
+	BackfacingComponent->SetRelativeRotation(FRotator(0.f, 180.f, 0.f));
+	BackfacingComponent->SetupAttachment(RootComponent);
 }
 
 void APortal::Tick(float DeltaSeconds)
@@ -50,12 +51,11 @@ void APortal::Tick(float DeltaSeconds)
 		return;
 	}
 
-	const FVector SurfaceNormal = PortalSurface->GetActorRotation().Vector();
+	const FVector PortalNormal = GetActorRotation().Vector();
 	TArray<TObjectPtr<AActor>> TeleportingActors;
 	for (TObjectPtr<AActor> Actor : ActorsInPortalRange)
 	{
-		const FVector FromSurface = (Actor->GetActorLocation() - PortalSurface->GetActorLocation()).GetSafeNormal();
-		if (FromSurface.Dot(SurfaceNormal) < 0.f)
+		if (ShouldTeleportActor(Actor, PortalNormal))
 		{
 			TeleportingActors.Add(Actor);
 		}
@@ -96,7 +96,7 @@ FVector APortal::GetLocalCoords() const
 }
 
 void APortal::SetRenderTargets(TObjectPtr<UTextureRenderTarget2D> ReadTarget,
-	TObjectPtr<UTextureRenderTarget2D> WriteTarget)
+                               TObjectPtr<UTextureRenderTarget2D> WriteTarget)
 {
 	if (!ReadTarget || !WriteTarget)
 	{
@@ -107,19 +107,21 @@ void APortal::SetRenderTargets(TObjectPtr<UTextureRenderTarget2D> ReadTarget,
 	RenderTargetRead = ReadTarget;
 	DynamicInstance->SetTextureParameterValue("PortalTexture", RenderTargetRead);
 	PortalMesh->SetMaterial(0, DynamicInstance);
-	
+
 	RenderTargetWrite = WriteTarget;
 	SceneCaptureComponent->TextureTarget = WriteTarget;
 }
 
-void APortal::UpdateSceneCaptureTransform(const FVector& RelativeLocation)
+void APortal::UpdateSceneCaptureTransform(const FTransform& RelativeTransform)
 {
-	SceneCaptureComponent->SetRelativeRotation(RelativeLocation.Rotation());
+	SceneCaptureComponent->CustomNearClippingPlane = RelativeTransform.GetTranslation().Length();
+	SceneCaptureComponent->SetRelativeTransform(RelativeTransform);
 }
 
-FVector APortal::GetRelativeLocationTo(TObjectPtr<ACharacter> PlayerCharacter) const
+FTransform APortal::GetBackfacingRelativeTransform(TObjectPtr<ACharacter> PlayerCharacter) const
 {
-	return GetActorTransform().InverseTransformPosition(PlayerCharacter->GetPawnViewLocation());
+	const FTransform ViewTransform = {PlayerCharacter->GetControlRotation(), PlayerCharacter->GetPawnViewLocation()};
+	return ViewTransform.GetRelativeTransform(BackfacingComponent->GetComponentTransform());
 }
 
 void APortal::SetConnectedPortal(TObjectPtr<APortal> Portal)
@@ -146,13 +148,14 @@ void APortal::BeginPlay()
 }
 
 void APortal::OnCollisionBoxStartOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+                                         UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
+                                         const FHitResult& SweepResult)
 {
 	OnActorBeginOverlap(OtherActor);
 }
 
 void APortal::OnCollisionBoxEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+                                       UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
 	OnActorEndOverlap(OtherActor);
 }
@@ -178,12 +181,24 @@ void APortal::TeleportActor(TObjectPtr<AActor> Actor)
 {
 	const TObjectPtr<APawn> Pawn = Cast<APawn>(Actor);
 	const FRotator CurrentRotation = Pawn ? Pawn->GetControlRotation() : GetActorRotation();
-	const FRotator RelativeRotation = CurrentRotation - BackFacingComponent->GetComponentRotation();
+	const FRotator RelativeRotation = CurrentRotation - BackfacingComponent->GetComponentRotation();
 	const FRotator NewRotation = OtherPortal->GetActorRotation() + RelativeRotation;
 	// TODO: this probably will have to be reworked slightly for wall-to-floor portals
-	const float ZOffset = GetTransform().InverseTransformPosition(Actor->GetActorLocation()).Z;
-	const FVector NewLocation = OtherPortal->GetActorLocation() + OtherPortal->GetActorUpVector() * ZOffset;
+	const FVector RelativeLocation = BackfacingComponent->GetComponentTransform().InverseTransformPosition(
+		Actor->GetActorLocation());
+	const FVector NewLocation = OtherPortal->GetTransform().TransformPosition(RelativeLocation);
 	OtherPortal->PrepareForActorTeleport(Actor);
 	Actor->TeleportTo(NewLocation, NewRotation);
 	UE_LOG(LogPortal, Verbose, TEXT("Portal %s has teleported actor %s"), *GetName(), *Actor->GetName());
+}
+
+bool APortal::ShouldTeleportActor(TObjectPtr<AActor> Actor, const FVector PortalNormal) const
+{
+	const FVector ToActorDirection = (Actor->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+	return ToActorDirection.Dot(PortalNormal) < 0.f;
+}
+
+bool APortal::ShouldTeleportActor(TObjectPtr<AActor> Actor) const
+{
+	return ShouldTeleportActor(Actor, GetActorRotation().Vector());
 }

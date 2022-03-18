@@ -3,6 +3,7 @@
 
 #include "Portal/PortalComponent.h"
 
+#include "Engine/TextureRenderTarget2D.h"
 #include "GameFramework/Character.h"
 #include "Portal/Portal.h"
 #include "Portal/PortalSurface.h"
@@ -14,7 +15,7 @@ DEFINE_LOG_CATEGORY(LogPortal);
 UPortalComponent::UPortalComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
-	
+
 	PortalClasses = {
 		{EPortalType::First, APortal::StaticClass()},
 		{EPortalType::Second, APortal::StaticClass()}
@@ -76,7 +77,7 @@ void UPortalComponent::ShootPortal(EPortalType PortalType, const FVector& StartL
 	{
 		Portal->SetConnectedPortal(OtherPortal);
 		OtherPortal->SetConnectedPortal(Portal);
-		
+
 		Portal->SetRenderTargets(RenderTargets[OtherPortalType], RenderTargets[PortalType]);
 		if (!bThisPortalExisted)
 		{
@@ -86,7 +87,7 @@ void UPortalComponent::ShootPortal(EPortalType PortalType, const FVector& StartL
 }
 
 void UPortalComponent::TickComponent(float DeltaTime, ELevelTick TickType,
-	FActorComponentTickFunction* ThisTickFunction)
+                                     FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
@@ -97,8 +98,8 @@ void UPortalComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 	const TObjectPtr<APortal> FirstPortal = ActivePortals[EPortalType::First];
 	const TObjectPtr<APortal> SecondPortal = ActivePortals[EPortalType::Second];
-	FirstPortal->UpdateSceneCaptureTransform(SecondPortal->GetRelativeLocationTo(OwnerCharacter));
-	SecondPortal->UpdateSceneCaptureTransform(FirstPortal->GetRelativeLocationTo(OwnerCharacter));
+	FirstPortal->UpdateSceneCaptureTransform(SecondPortal->GetBackfacingRelativeTransform(OwnerCharacter));
+	SecondPortal->UpdateSceneCaptureTransform(FirstPortal->GetBackfacingRelativeTransform(OwnerCharacter));
 }
 
 void UPortalComponent::BeginPlay()
@@ -111,11 +112,26 @@ void UPortalComponent::BeginPlay()
 	};
 
 	OwnerCharacter = Cast<ACharacter>(GetOwner());
+
+	if (RenderTargets[EPortalType::First] && RenderTargets[EPortalType::Second])
+	{
+		const TObjectPtr<APlayerController> PlayerController = Cast<APlayerController>(OwnerCharacter->GetController());
+		int32 ViewportX, ViewportY;
+		PlayerController->GetViewportSize(ViewportX, ViewportY);
+		RenderTargets[EPortalType::First]->SizeX = ViewportX;
+		RenderTargets[EPortalType::First]->SizeY = ViewportY;
+		RenderTargets[EPortalType::Second]->SizeX = ViewportX;
+		RenderTargets[EPortalType::Second]->SizeY = ViewportY;
+	}
+	else
+	{
+		UE_LOG(LogPortal, Error, TEXT("One or both of the render targets for portals is not set!"));
+	}
 }
 
 bool UPortalComponent::ValidatePortalLocation(EPortalType PortalType, const FHitResult& HitResult,
-                                                 TObjectPtr<APortalSurface> Surface, FVector& OutLocation,
-                                                 FVector& OutLocalCoords) const
+                                              TObjectPtr<APortalSurface> Surface, FVector& OutLocation,
+                                              FVector& OutLocalCoords) const
 {
 	const FTransform SurfaceTransform = Surface->GetActorTransform();
 	const FVector SurfaceExtents = Surface->GetExtents();
@@ -132,7 +148,7 @@ bool UPortalComponent::ValidatePortalLocation(EPortalType PortalType, const FHit
 }
 
 bool UPortalComponent::IsOverlappingWithOtherPortal(EPortalType PortalType, TObjectPtr<APortalSurface> PortalSurface,
-                                                       const FVector& LocalCoords) const
+                                                    const FVector& LocalCoords) const
 {
 	const TObjectPtr<APortal> OtherPortal = ActivePortals[GetOtherPortalType(PortalType)];
 	if (!OtherPortal)

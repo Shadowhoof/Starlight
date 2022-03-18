@@ -19,7 +19,7 @@ public:
 	APortal();
 
 	virtual void Tick(float DeltaSeconds) override;
-	
+
 	/**
 	 *	Fills out portal data. Must be called immediately after creating a new portal.
 	 *	@param Surface actor the portal is attached to
@@ -41,9 +41,9 @@ public:
 	void SetRenderTargets(TObjectPtr<UTextureRenderTarget2D> ReadTarget,
 	                      TObjectPtr<UTextureRenderTarget2D> WriteTarget);
 
-	void UpdateSceneCaptureTransform(const FVector& RelativeLocation);
+	void UpdateSceneCaptureTransform(const FTransform& RelativeTransform);
 
-	FVector GetRelativeLocationTo(TObjectPtr<ACharacter> PlayerCharacter) const;
+	FTransform GetBackfacingRelativeTransform(TObjectPtr<ACharacter> PlayerCharacter) const;
 
 	void SetConnectedPortal(TObjectPtr<APortal> Portal);
 
@@ -63,19 +63,18 @@ protected:
 	TObjectPtr<UBoxComponent> CollisionBoxComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Portal")
-	TObjectPtr<USceneComponent> BackFacingComponent;
+	TObjectPtr<USceneComponent> BackfacingComponent;
 
 protected:
 	virtual void BeginPlay() override;
 
 private:
-	
 	UPROPERTY()
 	TObjectPtr<APortalSurface> PortalSurface = nullptr;
 
 	UPROPERTY()
 	TObjectPtr<APortal> OtherPortal = nullptr;
-	
+
 	UPROPERTY()
 	FVector LocalCoords;
 
@@ -94,8 +93,8 @@ private:
 private:
 	UFUNCTION()
 	void OnCollisionBoxStartOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-	                           UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
-	                           const FHitResult& SweepResult);
+	                                UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
+	                                const FHitResult& SweepResult);
 
 	UFUNCTION()
 	void OnCollisionBoxEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -103,6 +102,9 @@ private:
 
 	void OnActorBeginOverlap(TObjectPtr<AActor> Actor);
 	void OnActorEndOverlap(TObjectPtr<AActor> Actor);
-	
+
 	void TeleportActor(TObjectPtr<AActor> Actor);
+
+	bool ShouldTeleportActor(TObjectPtr<AActor> Actor, const FVector PortalNormal) const;
+	bool ShouldTeleportActor(TObjectPtr<AActor> Actor) const;
 };

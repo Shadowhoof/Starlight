@@ -60,6 +60,8 @@ void AStarlightCharacter::BeginPlay()
 	{
 		CameraComponent->bUsePawnControlRotation = true;
 		bUseControllerRotationYaw = true;
+		LeftController->SetHiddenInGame(true, true);
+		RightController->SetHiddenInGame(true, true);
 	}
 
 	// initialize grab devices
