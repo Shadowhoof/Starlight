@@ -12,6 +12,31 @@
 #include "Portal/PortalSurface.h"
 
 
+UCharacterInPortalRange::UCharacterInPortalRange()
+{
+}
+
+void UCharacterInPortalRange::Initialize(TObjectPtr<ACharacter> InCharacter, TObjectPtr<APortal> InPortal)
+{
+	ensure(InCharacter && InPortal);
+	Character = InCharacter;
+	Portal = InPortal;
+
+	Character->OnCharacterMovementUpdated.AddDynamic(this, &UCharacterInPortalRange::OnCharacterMoved);
+}
+
+void UCharacterInPortalRange::Deinitialize()
+{
+	Character->OnCharacterMovementUpdated.RemoveDynamic(this, &UCharacterInPortalRange::OnCharacterMoved);
+	Character = nullptr;
+	Portal = nullptr;
+}
+
+void UCharacterInPortalRange::OnCharacterMoved(float DeltaSeconds, FVector OldLocation, FVector OldVelocity)
+{
+	Portal->OnCharacterMoved(Character);
+}
+
 APortal::APortal()
 {
 	PrimaryActorTick.bCanEverTick = true;
@@ -137,6 +162,14 @@ void APortal::PrepareForActorTeleport(TObjectPtr<AActor> TeleportingActor)
 	}
 }
 
+void APortal::OnCharacterMoved(TObjectPtr<ACharacter> Character)
+{
+	if (ShouldTeleportActor(Character))
+	{
+		TeleportActor(Character);
+	}
+}
+
 void APortal::BeginPlay()
 {
 	Super::BeginPlay();
@@ -167,6 +200,13 @@ void APortal::OnActorBeginOverlap(TObjectPtr<AActor> Actor)
 		UE_LOG(LogPortal, Verbose, TEXT("Portal %s is now overlapping with %s"), *GetName(), *Actor->GetName());
 		PortalSurface->SetCollisionEnabledForActor(Actor, false);
 		ActorsInPortalRange.Add(Actor);
+
+		if (TObjectPtr<ACharacter> Character = Cast<ACharacter>(Actor))
+		{
+			TObjectPtr<UCharacterInPortalRange> CharacterInRange = NewObject<UCharacterInPortalRange>(this);
+			CharacterInRange->Initialize(Character, this);
+			CharactersInPortalRange.Add(Character, CharacterInRange);
+		}
 	}
 }
 
@@ -175,6 +215,13 @@ void APortal::OnActorEndOverlap(TObjectPtr<AActor> Actor)
 	UE_LOG(LogPortal, Verbose, TEXT("Portal %s is no longer overlapping with %s"), *GetName(), *Actor->GetName());
 	PortalSurface->SetCollisionEnabledForActor(Actor, true);
 	ActorsInPortalRange.Remove(Actor);
+
+	if (TObjectPtr<ACharacter> Character = Cast<ACharacter>(Actor))
+	{
+		TObjectPtr<UCharacterInPortalRange> CharacterInRange = CharactersInPortalRange[Character];
+		CharacterInRange->Deinitialize();
+		CharactersInPortalRange.Remove(Character);
+	}
 }
 
 void APortal::TeleportActor(TObjectPtr<AActor> Actor)

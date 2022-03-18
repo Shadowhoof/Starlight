@@ -9,6 +9,37 @@
 
 class UBoxComponent;
 class APortalSurface;
+class APortal;
+
+
+/**
+ *	Utility class used for notifying portal about movement of characters that are in that portal's range and can
+ *	potentially be teleported at any moment.
+ *	TODO: create an interface for teleportable actors and handle movement there? maybe?
+ */
+UCLASS()
+class UCharacterInPortalRange : public UObject
+{
+	GENERATED_BODY()
+
+public:
+	UCharacterInPortalRange();
+
+	void Initialize(TObjectPtr<ACharacter> InCharacter, TObjectPtr<APortal> InPortal);
+
+	void Deinitialize();
+	
+private:
+	UPROPERTY()
+	TObjectPtr<ACharacter> Character;
+
+	UPROPERTY()
+	TObjectPtr<APortal> Portal;
+
+	UFUNCTION()
+	void OnCharacterMoved(float DeltaSeconds, FVector OldLocation, FVector OldVelocity);
+};
+
 
 UCLASS()
 class STARLIGHT_API APortal : public AActor
@@ -48,7 +79,9 @@ public:
 	void SetConnectedPortal(TObjectPtr<APortal> Portal);
 
 	void PrepareForActorTeleport(TObjectPtr<AActor> TeleportingActor);
-	
+
+	void OnCharacterMoved(TObjectPtr<ACharacter> Character);
+
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Portal")
 	TObjectPtr<UStaticMeshComponent> PortalMesh;
@@ -89,7 +122,10 @@ private:
 
 	UPROPERTY()
 	TArray<TObjectPtr<AActor>> ActorsInPortalRange;
-	
+
+	UPROPERTY()
+	TMap<TObjectPtr<ACharacter>, TObjectPtr<UCharacterInPortalRange>> CharactersInPortalRange;
+
 private:
 	UFUNCTION()
 	void OnCollisionBoxStartOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
