@@ -10,32 +10,8 @@
 #include "GameFramework/Character.h"
 #include "Portal/PortalConstants.h"
 #include "Portal/PortalSurface.h"
+#include "Portal/Teleportable.h"
 
-
-UCharacterInPortalRange::UCharacterInPortalRange()
-{
-}
-
-void UCharacterInPortalRange::Initialize(TObjectPtr<ACharacter> InCharacter, TObjectPtr<APortal> InPortal)
-{
-	ensure(InCharacter && InPortal);
-	Character = InCharacter;
-	Portal = InPortal;
-
-	Character->OnCharacterMovementUpdated.AddDynamic(this, &UCharacterInPortalRange::OnCharacterMoved);
-}
-
-void UCharacterInPortalRange::Deinitialize()
-{
-	Character->OnCharacterMovementUpdated.RemoveDynamic(this, &UCharacterInPortalRange::OnCharacterMoved);
-	Character = nullptr;
-	Portal = nullptr;
-}
-
-void UCharacterInPortalRange::OnCharacterMoved(float DeltaSeconds, FVector OldLocation, FVector OldVelocity)
-{
-	Portal->OnCharacterMoved(Character);
-}
 
 APortal::APortal()
 {
@@ -77,22 +53,23 @@ void APortal::Tick(float DeltaSeconds)
 	}
 
 	const FVector PortalNormal = GetActorRotation().Vector();
-	TArray<TObjectPtr<AActor>> TeleportingActors;
-	for (TObjectPtr<AActor> Actor : ActorsInPortalRange)
+	TArray<ITeleportable*> TeleportingActors;
+	for (TScriptInterface<ITeleportable> ScriptInterface : ActorsInPortalRange)
 	{
-		if (ShouldTeleportActor(Actor, PortalNormal))
+		ITeleportable* Teleportable = ScriptInterface.GetInterface();
+		if (ShouldTeleportActor(Teleportable, PortalNormal))
 		{
-			TeleportingActors.Add(Actor);
+			TeleportingActors.Add(Teleportable);
 		}
 	}
 
-	for (TObjectPtr<AActor> Actor : TeleportingActors)
+	for (ITeleportable* Teleportable : TeleportingActors)
 	{
-		TeleportActor(Actor);
+		TeleportActor(Teleportable);
 	}
 }
 
-void APortal::Initialize(const TObjectPtr<APortalSurface> Surface, FVector InLocalCoords)
+void APortal::Initialize(const TObjectPtr<APortalSurface> Surface, FVector InLocalCoords, EPortalType InPortalType)
 {
 	if (PortalSurface)
 	{
@@ -108,6 +85,7 @@ void APortal::Initialize(const TObjectPtr<APortalSurface> Surface, FVector InLoc
 
 	PortalSurface = Surface;
 	LocalCoords = InLocalCoords;
+	PortalType = InPortalType;
 }
 
 TObjectPtr<APortalSurface> APortal::GetPortalSurface() const
@@ -154,19 +132,19 @@ void APortal::SetConnectedPortal(TObjectPtr<APortal> Portal)
 	OtherPortal = Portal;
 }
 
-void APortal::PrepareForActorTeleport(TObjectPtr<AActor> TeleportingActor)
+void APortal::PrepareForActorTeleport(TObjectPtr<ITeleportable> TeleportingActor)
 {
 	if (OtherPortal->GetPortalSurface() != PortalSurface)
 	{
-		OnActorBeginOverlap(TeleportingActor);
+		OnActorBeginOverlap(TeleportingActor->CastToTeleportableActor());
 	}
 }
 
-void APortal::OnCharacterMoved(TObjectPtr<ACharacter> Character)
+void APortal::OnActorMoved(TObjectPtr<ITeleportable> Actor)
 {
-	if (ShouldTeleportActor(Character))
+	if (ShouldTeleportActor(Actor))
 	{
-		TeleportActor(Character);
+		TeleportActor(Actor);
 	}
 }
 
@@ -195,57 +173,58 @@ void APortal::OnCollisionBoxEndOverlap(UPrimitiveComponent* OverlappedComponent,
 
 void APortal::OnActorBeginOverlap(TObjectPtr<AActor> Actor)
 {
-	if (!ActorsInPortalRange.Contains(Actor))
+	ITeleportable* TeleportableActor = Cast<ITeleportable>(Actor);
+	if (!TeleportableActor)
+	{
+		return;
+	}
+
+	if (!ActorsInPortalRange.Contains(TeleportableActor))
 	{
 		UE_LOG(LogPortal, Verbose, TEXT("Portal %s is now overlapping with %s"), *GetName(), *Actor->GetName());
-		PortalSurface->SetCollisionEnabledForActor(Actor, false);
-		ActorsInPortalRange.Add(Actor);
-
-		if (TObjectPtr<ACharacter> Character = Cast<ACharacter>(Actor))
-		{
-			TObjectPtr<UCharacterInPortalRange> CharacterInRange = NewObject<UCharacterInPortalRange>(this);
-			CharacterInRange->Initialize(Character, this);
-			CharactersInPortalRange.Add(Character, CharacterInRange);
-		}
+		TeleportableActor->OnOverlapWithPortalBegin(this);
+		ActorsInPortalRange.Add(TeleportableActor->GetTeleportableScriptInterface());
 	}
 }
 
 void APortal::OnActorEndOverlap(TObjectPtr<AActor> Actor)
 {
-	UE_LOG(LogPortal, Verbose, TEXT("Portal %s is no longer overlapping with %s"), *GetName(), *Actor->GetName());
-	PortalSurface->SetCollisionEnabledForActor(Actor, true);
-	ActorsInPortalRange.Remove(Actor);
-
-	if (TObjectPtr<ACharacter> Character = Cast<ACharacter>(Actor))
+	ITeleportable* TeleportableActor = Cast<ITeleportable>(Actor);
+	if (!TeleportableActor)
 	{
-		TObjectPtr<UCharacterInPortalRange> CharacterInRange = CharactersInPortalRange[Character];
-		CharacterInRange->Deinitialize();
-		CharactersInPortalRange.Remove(Character);
+		return;
 	}
+
+	UE_LOG(LogPortal, Verbose, TEXT("Portal %s is no longer overlapping with %s"), *GetName(), *Actor->GetName());
+	TeleportableActor->OnOverlapWithPortalEnd(this);
+	ActorsInPortalRange.Remove(TeleportableActor->GetTeleportableScriptInterface());
 }
 
-void APortal::TeleportActor(TObjectPtr<AActor> Actor)
+void APortal::TeleportActor(TObjectPtr<ITeleportable> TeleportingActor)
 {
-	const TObjectPtr<APawn> Pawn = Cast<APawn>(Actor);
-	const FRotator CurrentRotation = Pawn ? Pawn->GetControlRotation() : GetActorRotation();
-	const FRotator RelativeRotation = CurrentRotation - BackfacingComponent->GetComponentRotation();
+	const AActor* Actor = TeleportingActor->CastToTeleportableActor();
+	
+	const FRotator RelativeRotation = TeleportingActor->GetTeleportRotation() - BackfacingComponent->GetComponentRotation();
 	const FRotator NewRotation = OtherPortal->GetActorRotation() + RelativeRotation;
+	
 	// TODO: this probably will have to be reworked slightly for wall-to-floor portals
-	const FVector RelativeLocation = BackfacingComponent->GetComponentTransform().InverseTransformPosition(
-		Actor->GetActorLocation());
+	const FVector RelativeLocation = BackfacingComponent->GetComponentTransform().InverseTransformPosition(Actor->GetActorLocation());
 	const FVector NewLocation = OtherPortal->GetTransform().TransformPosition(RelativeLocation);
-	OtherPortal->PrepareForActorTeleport(Actor);
-	Actor->TeleportTo(NewLocation, NewRotation);
+	
+	OtherPortal->PrepareForActorTeleport(TeleportingActor);
+	TeleportingActor->Teleport(NewLocation, NewRotation);
+	
 	UE_LOG(LogPortal, Verbose, TEXT("Portal %s has teleported actor %s"), *GetName(), *Actor->GetName());
 }
 
-bool APortal::ShouldTeleportActor(TObjectPtr<AActor> Actor, const FVector PortalNormal) const
+bool APortal::ShouldTeleportActor(TObjectPtr<ITeleportable> TeleportingActor, const FVector PortalNormal) const
 {
-	const FVector ToActorDirection = (Actor->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+	const FVector ToActorDirection = (TeleportingActor->CastToTeleportableActor()->GetActorLocation() - GetActorLocation()).
+		GetSafeNormal();
 	return ToActorDirection.Dot(PortalNormal) < 0.f;
 }
 
-bool APortal::ShouldTeleportActor(TObjectPtr<AActor> Actor) const
+bool APortal::ShouldTeleportActor(TObjectPtr<ITeleportable> TeleportingActor) const
 {
-	return ShouldTeleportActor(Actor, GetActorRotation().Vector());
+	return ShouldTeleportActor(TeleportingActor, GetActorRotation().Vector());
 }

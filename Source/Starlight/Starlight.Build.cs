@@ -10,7 +10,7 @@ public class Starlight : ModuleRules
 	
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "NavigationSystem" });
 
-		PrivateDependencyModuleNames.AddRange(new string[] { "HeadMountedDisplay" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "HeadMountedDisplay", "PhysicsCore", "Chaos" });
 
 		// Uncomment if you are using Slate UI
 		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });

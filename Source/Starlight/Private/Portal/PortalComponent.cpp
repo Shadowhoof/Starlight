@@ -62,7 +62,7 @@ void UPortalComponent::ShootPortal(EPortalType PortalType, const FVector& StartL
 		PortalRotation,
 		SpawnParams
 	);
-	Portal->Initialize(PortalSurface, LocalCoords);
+	Portal->Initialize(PortalSurface, LocalCoords, PortalType);
 
 	const bool bThisPortalExisted = ActivePortals[PortalType] != nullptr;
 	if (bThisPortalExisted)

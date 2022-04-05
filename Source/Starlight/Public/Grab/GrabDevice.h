@@ -26,8 +26,8 @@ public:
 
 protected:
 
-	UPROPERTY(Transient)
-	TObjectPtr<IGrabbable> GrabbedObject = nullptr;
+	UPROPERTY()
+	TScriptInterface<IGrabbable> GrabbedObject;
 
 	void OnSuccessfulGrab(TObjectPtr<IGrabbable> ObjectToGrab);
 

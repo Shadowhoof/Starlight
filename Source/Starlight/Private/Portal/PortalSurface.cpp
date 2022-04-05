@@ -5,7 +5,6 @@
 
 #include "Components/CapsuleComponent.h"
 #include "Portal/PortalConstants.h"
-#include "Statics/StarlightMacros.h"
 
 
 APortalSurface::APortalSurface()
@@ -31,20 +30,9 @@ bool APortalSurface::CanFitPortal() const
 	return bCanFitPortal;
 }
 
-void APortalSurface::SetCollisionEnabledForActor(const TObjectPtr<AActor> Actor, bool bIsEnabled)
+TObjectPtr<UPrimitiveComponent> APortalSurface::GetCollisionComponent() const
 {
-	UE_LOG(LogPortal, Verbose, TEXT("Setting collision for portal surface %s and actor %s, enabled: %s"), *GetName(),
-	       *Actor->GetName(), BOOL_TO_STRING(bIsEnabled));
-
-	const bool bIgnoreCollision = !bIsEnabled;
-	StaticMeshComponent->IgnoreActorWhenMoving(Actor, bIgnoreCollision);
-
-	TInlineComponentArray<UPrimitiveComponent*> OtherActorComponents;
-	Actor->GetComponents<UPrimitiveComponent>(OtherActorComponents);
-	for (UPrimitiveComponent* Component : OtherActorComponents)
-	{
-		Component->IgnoreActorWhenMoving(this, bIgnoreCollision);
-	}
+	return StaticMeshComponent;
 }
 
 void APortalSurface::BeginPlay()

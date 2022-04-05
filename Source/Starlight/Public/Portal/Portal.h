@@ -4,41 +4,14 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "PortalConstants.h"
 #include "Portal.generated.h"
 
 
+class ITeleportable;
 class UBoxComponent;
 class APortalSurface;
 class APortal;
-
-
-/**
- *	Utility class used for notifying portal about movement of characters that are in that portal's range and can
- *	potentially be teleported at any moment.
- *	TODO: create an interface for teleportable actors and handle movement there? maybe?
- */
-UCLASS()
-class UCharacterInPortalRange : public UObject
-{
-	GENERATED_BODY()
-
-public:
-	UCharacterInPortalRange();
-
-	void Initialize(TObjectPtr<ACharacter> InCharacter, TObjectPtr<APortal> InPortal);
-
-	void Deinitialize();
-	
-private:
-	UPROPERTY()
-	TObjectPtr<ACharacter> Character;
-
-	UPROPERTY()
-	TObjectPtr<APortal> Portal;
-
-	UFUNCTION()
-	void OnCharacterMoved(float DeltaSeconds, FVector OldLocation, FVector OldVelocity);
-};
 
 
 UCLASS()
@@ -55,8 +28,9 @@ public:
 	 *	Fills out portal data. Must be called immediately after creating a new portal.
 	 *	@param Surface actor the portal is attached to
 	 *	@param InLocalCoords local coordinates of portal within portal surface
+	 *	@param InPortalType type of created portal (either first or second)
 	 */
-	void Initialize(const TObjectPtr<APortalSurface> Surface, FVector InLocalCoords);
+	void Initialize(const TObjectPtr<APortalSurface> Surface, FVector InLocalCoords, EPortalType InPortalType);
 
 	/** Returns surface the portal is attached to. */
 	TObjectPtr<APortalSurface> GetPortalSurface() const;
@@ -78,9 +52,9 @@ public:
 
 	void SetConnectedPortal(TObjectPtr<APortal> Portal);
 
-	void PrepareForActorTeleport(TObjectPtr<AActor> TeleportingActor);
+	void PrepareForActorTeleport(TObjectPtr<ITeleportable> TeleportingActor);
 
-	void OnCharacterMoved(TObjectPtr<ACharacter> Character);
+	void OnActorMoved(TObjectPtr<ITeleportable> Actor);
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Portal")
@@ -121,11 +95,10 @@ private:
 	TObjectPtr<UTextureRenderTarget2D> RenderTargetRead = nullptr;
 
 	UPROPERTY()
-	TArray<TObjectPtr<AActor>> ActorsInPortalRange;
+	TArray<TScriptInterface<ITeleportable>> ActorsInPortalRange;
 
-	UPROPERTY()
-	TMap<TObjectPtr<ACharacter>, TObjectPtr<UCharacterInPortalRange>> CharactersInPortalRange;
-
+	EPortalType PortalType;
+	
 private:
 	UFUNCTION()
 	void OnCollisionBoxStartOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -139,8 +112,8 @@ private:
 	void OnActorBeginOverlap(TObjectPtr<AActor> Actor);
 	void OnActorEndOverlap(TObjectPtr<AActor> Actor);
 
-	void TeleportActor(TObjectPtr<AActor> Actor);
+	void TeleportActor(TObjectPtr<ITeleportable> TeleportingActor);
 
-	bool ShouldTeleportActor(TObjectPtr<AActor> Actor, const FVector PortalNormal) const;
-	bool ShouldTeleportActor(TObjectPtr<AActor> Actor) const;
+	bool ShouldTeleportActor(TObjectPtr<ITeleportable> TeleportingActor, const FVector PortalNormal) const;
+	bool ShouldTeleportActor(TObjectPtr<ITeleportable> TeleportingActor) const;
 };

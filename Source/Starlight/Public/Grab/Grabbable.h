@@ -33,5 +33,10 @@ public:
 	virtual TObjectPtr<UPrimitiveComponent> GetAttachComponent() const;
 
 	virtual FVector GetLocation();
+
+	TScriptInterface<IGrabbable> GetGrabbableScriptInterface();
+
+	TObjectPtr<AActor> CastToGrabbableActor();
+	TObjectPtr<const AActor> CastToGrabbableActor() const;
 	
 };

@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "Portal/Teleportable.h"
 #include "StarlightCharacter.generated.h"
 
 enum class EPortalType : uint8;
@@ -27,7 +28,7 @@ enum class EMovementType : uint8
 
 
 UCLASS()
-class STARLIGHT_API AStarlightCharacter : public ACharacter
+class STARLIGHT_API AStarlightCharacter : public ACharacter, public ITeleportable
 {
 	GENERATED_BODY()
 
@@ -52,8 +53,14 @@ public:
 	 */
 	FVector GetMovementRightVector() const;
 
-	virtual bool TeleportTo(const FVector& DestLocation, const FRotator& DestRotation, bool bIsATest = false,
-	                        bool bNoCheck = false) override;
+	/** teleportable public interface begin */
+	
+	virtual void OnOverlapWithPortalBegin(TObjectPtr<APortal> Portal) override;
+	virtual void OnOverlapWithPortalEnd(TObjectPtr<APortal> Portal) override;
+
+	virtual FRotator GetTeleportRotation() override;
+	
+	/** teleportable public interface end */
 
 protected:
 	virtual void BeginPlay() override;
@@ -83,9 +90,25 @@ protected:
 	UPROPERTY(Transient)
 	TObjectPtr<APlayerController> PlayerController;
 
+protected:
+
+	// protected teleportable interface
+	
+	virtual bool SetTeleportLocationAndRotation(const FVector& Location, const FRotator& Rotation) override;
+	
+	virtual TObjectPtr<UPrimitiveComponent> GetCollisionComponent() const override;
+
+	virtual FVector GetVelocity() const override;
+	virtual void SetVelocity(const FVector& Velocity) override;
+
+	// end protected teleportable interface
+	
 private:
 	UPROPERTY(Transient)
 	TMap<EControllerHand, TObjectPtr<UGrabDevice>> GrabDevices;
+
+	UPROPERTY()
+	TArray<TObjectPtr<APortal>> OverlappingPortals;
 
 private:
 	void LookUp(const float Rate);
@@ -99,4 +122,7 @@ private:
 	void ReleaseGrab(EControllerHand Hand);
 
 	void ShootPortal(EPortalType PortalType);
+
+	UFUNCTION()
+	void OnMovement(float DeltaSeconds, FVector OldLocation, FVector OldVelocity);
 };

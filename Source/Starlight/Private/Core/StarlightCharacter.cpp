@@ -1,6 +1,7 @@
 
 #include "Core/StarlightCharacter.h"
 
+#include "Components/CapsuleComponent.h"
 #include "MotionControllerComponent.h"
 #include "Camera/CameraComponent.h"
 #include "IXRTrackingSystem.h"
@@ -8,6 +9,7 @@
 #include "Grab/MotionControllerGrabDevice.h"
 #include "Grab/TraceGrabDevice.h"
 #include "Movement/TeleportComponent.h"
+#include "Portal/Portal.h"
 #include "Portal/PortalConstants.h"
 #include "Portal/PortalComponent.h"
 #include "Statics/StarlightStatics.h"
@@ -81,6 +83,8 @@ void AStarlightCharacter::BeginPlay()
 		TraceGrabDevice->Initialize(this);
 		GrabDevices.Add(EControllerHand::Special_1, TraceGrabDevice);
 	}
+
+	OnCharacterMovementUpdated.AddDynamic(this, &AStarlightCharacter::OnMovement);
 }
 
 void AStarlightCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -117,6 +121,34 @@ TObjectPtr<APlayerController> AStarlightCharacter::GetPlayerController() const
 TObjectPtr<UCameraComponent> AStarlightCharacter::GetCameraComponent() const
 {
 	return CameraComponent;
+}
+
+bool AStarlightCharacter::SetTeleportLocationAndRotation(const FVector& Location, const FRotator& Rotation)
+{
+	const FRotator NewActorRotation = FRotator(0.f, Rotation.Yaw, 0.f);
+	if (!TeleportTo(Location, NewActorRotation))
+	{
+		return false;
+	}
+
+	const FRotator NewControlRotation = FRotator(Rotation.Pitch, Rotation.Yaw, 0.f);
+	GetController()->SetControlRotation(NewControlRotation);
+	return true;
+}
+
+TObjectPtr<UPrimitiveComponent> AStarlightCharacter::GetCollisionComponent() const
+{
+	return GetCapsuleComponent();
+}
+
+FVector AStarlightCharacter::GetVelocity() const
+{
+	return GetCharacterMovement()->Velocity;
+}
+
+void AStarlightCharacter::SetVelocity(const FVector& Velocity)
+{
+	GetCharacterMovement()->Velocity = Velocity;
 }
 
 void AStarlightCharacter::LookUp(const float Rate)
@@ -179,21 +211,23 @@ FVector AStarlightCharacter::GetMovementRightVector() const
 	return AverageDirection.GetSafeNormal2D();
 }
 
-bool AStarlightCharacter::TeleportTo(const FVector& DestLocation, const FRotator& DestRotation, bool bIsATest,
-	bool bNoCheck)
+void AStarlightCharacter::OnOverlapWithPortalBegin(TObjectPtr<APortal> Portal)
 {
-	const FVector RelativeVelocity = GetActorRotation().UnrotateVector(GetCharacterMovement()->Velocity);
-	if (!Super::TeleportTo(DestLocation, FRotator(), bIsATest, bNoCheck))
-	{
-		return false;
-	}
-	
-	GetController()->SetControlRotation(DestRotation);
-	FaceRotation(DestRotation);
+	ensure(!OverlappingPortals.Contains(Portal));
+	ITeleportable::OnOverlapWithPortalBegin(Portal);
+	OverlappingPortals.Add(Portal);
+}
 
-	GetCharacterMovement()->Velocity = GetActorRotation().RotateVector(RelativeVelocity);
+void AStarlightCharacter::OnOverlapWithPortalEnd(TObjectPtr<APortal> Portal)
+{
+	ensure(OverlappingPortals.Contains(Portal));
+	ITeleportable::OnOverlapWithPortalEnd(Portal);
+	OverlappingPortals.Remove(Portal);
+}
 
-	return true;
+FRotator AStarlightCharacter::GetTeleportRotation()
+{
+	return GetControlRotation();
 }
 
 void AStarlightCharacter::Grab(EControllerHand Hand)
@@ -220,5 +254,13 @@ void AStarlightCharacter::ShootPortal(EPortalType PortalType)
 	FRotator EyesRotation;
 	GetActorEyesViewPoint(EyesLocation, EyesRotation);
 	PortalComponent->ShootPortal(PortalType, EyesLocation, EyesRotation.Vector());
+}
+
+void AStarlightCharacter::OnMovement(float DeltaSeconds, FVector OldLocation, FVector OldVelocity)
+{
+	for (APortal* Portal : OverlappingPortals)
+	{
+		Portal->OnActorMoved(this);
+	}
 }
 

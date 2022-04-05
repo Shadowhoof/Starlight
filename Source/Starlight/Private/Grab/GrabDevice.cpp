@@ -9,7 +9,7 @@
 
 TObjectPtr<IGrabbable> UGrabDevice::GetGrabbedObject() const
 {
-	return GrabbedObject;
+	return GrabbedObject.GetInterface();
 }
 
 bool UGrabDevice::TryGrabbing()
@@ -43,7 +43,7 @@ void UGrabDevice::OnSuccessfulGrab(TObjectPtr<IGrabbable> ObjectToGrab)
 {
 	ensure(ObjectToGrab && !GrabbedObject);
 	ObjectToGrab->OnGrab();
-	GrabbedObject = ObjectToGrab;
+	GrabbedObject = ObjectToGrab->GetGrabbableScriptInterface();
 }
 
 void UGrabDevice::OnSuccessfulRelease()
