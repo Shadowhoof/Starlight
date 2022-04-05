@@ -37,7 +37,10 @@ public:
 	TObjectPtr<AActor> CastToTeleportableActor();
 	TObjectPtr<const AActor> CastToTeleportableActor() const;
 
-	/** Called when portal is nearby and object can potentially be teleported soon. */
+	/**
+	 * Called when portal is nearby and object can potentially be teleported soon. Called only when there is a
+	 * connected portal present.
+	 */
 	virtual void OnOverlapWithPortalBegin(TObjectPtr<APortal> Portal);
 
 	/** Called when character is no longer within portal's teleport detection range */

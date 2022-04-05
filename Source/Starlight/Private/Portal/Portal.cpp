@@ -129,6 +129,14 @@ FTransform APortal::GetBackfacingRelativeTransform(TObjectPtr<ACharacter> Player
 
 void APortal::SetConnectedPortal(TObjectPtr<APortal> Portal)
 {
+	if (!OtherPortal)
+	{
+		for (TScriptInterface<ITeleportable> Teleportable : ActorsInPortalRange)
+		{
+			Teleportable->OnOverlapWithPortalBegin(this);
+		}
+	}
+	
 	OtherPortal = Portal;
 }
 
@@ -181,8 +189,10 @@ void APortal::OnActorBeginOverlap(TObjectPtr<AActor> Actor)
 
 	if (!ActorsInPortalRange.Contains(TeleportableActor))
 	{
-		UE_LOG(LogPortal, Verbose, TEXT("Portal %s is now overlapping with %s"), *GetName(), *Actor->GetName());
-		TeleportableActor->OnOverlapWithPortalBegin(this);
+		if (OtherPortal)
+		{
+			TeleportableActor->OnOverlapWithPortalBegin(this);
+		}
 		ActorsInPortalRange.Add(TeleportableActor->GetTeleportableScriptInterface());
 	}
 }
@@ -195,8 +205,10 @@ void APortal::OnActorEndOverlap(TObjectPtr<AActor> Actor)
 		return;
 	}
 
-	UE_LOG(LogPortal, Verbose, TEXT("Portal %s is no longer overlapping with %s"), *GetName(), *Actor->GetName());
-	TeleportableActor->OnOverlapWithPortalEnd(this);
+	if (OtherPortal)
+	{
+		TeleportableActor->OnOverlapWithPortalEnd(this);
+	}
 	ActorsInPortalRange.Remove(TeleportableActor->GetTeleportableScriptInterface());
 }
 

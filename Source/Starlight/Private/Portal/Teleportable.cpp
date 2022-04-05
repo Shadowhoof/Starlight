@@ -66,11 +66,13 @@ TObjectPtr<const AActor> ITeleportable::CastToTeleportableActor() const
 
 void ITeleportable::OnOverlapWithPortalBegin(TObjectPtr<APortal> Portal)
 {
+	UE_LOG(LogPortal, Verbose, TEXT("Portal %s is now overlapping with %s"), *Portal->GetName(), *CastToTeleportableActor()->GetName());
 	DisableCollisionWith(Portal->GetPortalSurface());
 }
 
 void ITeleportable::OnOverlapWithPortalEnd(TObjectPtr<APortal> Portal)
 {
+	UE_LOG(LogPortal, Verbose, TEXT("Portal %s is no longer overlapping with %s"), *Portal->GetName(), *CastToTeleportableActor()->GetName());
 	EnableCollisionWith(Portal->GetPortalSurface());
 }
 

@@ -5,6 +5,7 @@
 
 #include "Engine/TextureRenderTarget2D.h"
 #include "GameFramework/Character.h"
+#include "Kismet/GameplayStatics.h"
 #include "Portal/Portal.h"
 #include "Portal/PortalSurface.h"
 
@@ -56,13 +57,12 @@ void UPortalComponent::ShootPortal(EPortalType PortalType, const FVector& StartL
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 	TSubclassOf<APortal> PortalClass = PortalClasses[PortalType];
-	TObjectPtr<APortal> Portal = GetWorld()->SpawnActor<APortal>(
-		PortalClass,
-		PortalLocation,
-		PortalRotation,
-		SpawnParams
-	);
+
+	const FTransform SpawnTransform = FTransform(PortalRotation, PortalLocation);
+	TObjectPtr<APortal> Portal = GetWorld()->SpawnActorDeferred<APortal>(PortalClass, SpawnTransform, nullptr, nullptr,
+	                                                                     ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 	Portal->Initialize(PortalSurface, LocalCoords, PortalType);
+	UGameplayStatics::FinishSpawningActor(Portal, SpawnTransform);
 
 	const bool bThisPortalExisted = ActivePortals[PortalType] != nullptr;
 	if (bThisPortalExisted)
