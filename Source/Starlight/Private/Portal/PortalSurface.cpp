@@ -30,9 +30,18 @@ bool APortalSurface::CanFitPortal() const
 	return bCanFitPortal;
 }
 
-TObjectPtr<UPrimitiveComponent> APortalSurface::GetCollisionComponent() const
+void APortalSurface::GetCollisionComponents(TArray<TObjectPtr<UPrimitiveComponent>>& OutCollisionComponents)
 {
-	return StaticMeshComponent;
+	OutCollisionComponents.Add(StaticMeshComponent);
+	if (AttachedSurfaceCollisionComponent)
+	{
+		OutCollisionComponents.Add(AttachedSurfaceCollisionComponent);
+	}
+}
+
+TObjectPtr<UPrimitiveComponent> APortalSurface::GetAttachedSurfaceComponent() const
+{
+	return AttachedSurfaceCollisionComponent;
 }
 
 void APortalSurface::BeginPlay()
@@ -43,5 +52,10 @@ void APortalSurface::BeginPlay()
 	{
 		Size = StaticMesh->GetBoundingBox().GetSize() * GetActorScale();
 		bCanFitPortal = Size.Y >= PortalConstants::Size.Y && Size.Z >= PortalConstants::Size.Z;
+	}
+
+	if (AttachedSurface)
+	{
+		AttachedSurfaceCollisionComponent = Cast<UPrimitiveComponent>(AttachedSurface->GetComponentByClass(UPrimitiveComponent::StaticClass()));
 	}
 }

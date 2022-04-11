@@ -23,12 +23,21 @@ public:
 
 	bool CanFitPortal() const;
 
-	TObjectPtr<UPrimitiveComponent> GetCollisionComponent() const;
+	/**
+	 * Returns components that teleportable actor has to disable collision with in order to pass through the portal.
+	 * Can include portal's own components as well as components of the surface it is attached to.
+	 */
+	void GetCollisionComponents(TArray<TObjectPtr<UPrimitiveComponent>>& OutCollisionComponents);
+
+	TObjectPtr<UPrimitiveComponent> GetAttachedSurfaceComponent() const;
 	
 protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "StaticMesh")
 	TObjectPtr<UStaticMeshComponent> StaticMeshComponent;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Portal")
+	TObjectPtr<AActor> AttachedSurface;
 
 	FVector Size;
 
@@ -37,6 +46,10 @@ protected:
 protected:
 
 	virtual void BeginPlay() override;
-	
+
+private:
+
+	UPROPERTY()
+	TObjectPtr<UPrimitiveComponent> AttachedSurfaceCollisionComponent;
 	
 };

@@ -86,6 +86,12 @@ void APortal::Initialize(const TObjectPtr<APortalSurface> Surface, FVector InLoc
 	PortalSurface = Surface;
 	LocalCoords = InLocalCoords;
 	PortalType = InPortalType;
+
+	// hide attached surface's mesh when capturing scene so it doesn't occlude the view
+	if (UPrimitiveComponent* SurfaceCollisionComp = PortalSurface->GetAttachedSurfaceComponent())
+	{
+		SceneCaptureComponent->HideComponent(SurfaceCollisionComp);
+	}
 }
 
 TObjectPtr<APortalSurface> APortal::GetPortalSurface() const

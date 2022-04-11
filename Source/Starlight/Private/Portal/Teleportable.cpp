@@ -30,10 +30,15 @@ bool ITeleportable::Teleport(const FVector& Location, const FRotator& Rotation)
 
 void ITeleportable::EnableCollisionWith(TObjectPtr<APortalSurface> PortalSurface)
 {
-	const TObjectPtr<UPrimitiveComponent> CollisionComponent = GetCollisionComponent();
-	if (CollisionComponent)
+	const TObjectPtr<UPrimitiveComponent> TeleportableComponent = GetCollisionComponent();
+	if (TeleportableComponent)
 	{
-		UStarlightStatics::EnableCollisionBetween(PortalSurface->GetCollisionComponent(), CollisionComponent);
+		TArray<TObjectPtr<UPrimitiveComponent>> SurfaceCollisionComponents;
+		PortalSurface->GetCollisionComponents(SurfaceCollisionComponents);
+		for (UPrimitiveComponent* SurfaceComponent : SurfaceCollisionComponents)
+		{
+			UStarlightStatics::EnableCollisionBetween(SurfaceComponent, TeleportableComponent);
+		}
 	}
 	else
 	{
@@ -43,10 +48,15 @@ void ITeleportable::EnableCollisionWith(TObjectPtr<APortalSurface> PortalSurface
 
 void ITeleportable::DisableCollisionWith(TObjectPtr<APortalSurface> PortalSurface)
 {
-	const TObjectPtr<UPrimitiveComponent> CollisionComponent = GetCollisionComponent();
-	if (CollisionComponent)
+	const TObjectPtr<UPrimitiveComponent> TeleportableComponent = GetCollisionComponent();
+	if (TeleportableComponent)
 	{
-		UStarlightStatics::DisableCollisionBetween(PortalSurface->GetCollisionComponent(), CollisionComponent);
+		TArray<TObjectPtr<UPrimitiveComponent>> SurfaceCollisionComponents;
+		PortalSurface->GetCollisionComponents(SurfaceCollisionComponents);
+		for (UPrimitiveComponent* SurfaceComponent : SurfaceCollisionComponents)
+		{
+			UStarlightStatics::DisableCollisionBetween(SurfaceComponent, TeleportableComponent);
+		}
 	}
 	else
 	{
