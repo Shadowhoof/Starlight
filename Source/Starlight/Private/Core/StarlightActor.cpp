@@ -17,16 +17,6 @@ TObjectPtr<UPrimitiveComponent> AStarlightActor::GetAttachComponent() const
 	return StaticMeshComponent;
 }
 
-FRotator AStarlightActor::GetTeleportRotation()
-{
-	return GetActorRotation();
-}
-
-bool AStarlightActor::SetTeleportLocationAndRotation(const FVector& Location, const FRotator& Rotation)
-{
-	return TeleportTo(Location, Rotation, false, true);
-}
-
 TObjectPtr<UPrimitiveComponent> AStarlightActor::GetCollisionComponent() const
 {
 	return StaticMeshComponent;

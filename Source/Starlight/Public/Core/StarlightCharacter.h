@@ -53,13 +53,15 @@ public:
 	 */
 	FVector GetMovementRightVector() const;
 
+	virtual void Tick(float DeltaSeconds) override;
+	
 	/** teleportable public interface begin */
+
+	virtual void Teleport(TObjectPtr<APortal> SourcePortal, TObjectPtr<APortal> TargetPortal) override;
 	
 	virtual void OnOverlapWithPortalBegin(TObjectPtr<APortal> Portal) override;
 	virtual void OnOverlapWithPortalEnd(TObjectPtr<APortal> Portal) override;
 
-	virtual FRotator GetTeleportRotation() override;
-	
 	/** teleportable public interface end */
 
 protected:
@@ -94,8 +96,6 @@ protected:
 
 	// protected teleportable interface
 	
-	virtual bool SetTeleportLocationAndRotation(const FVector& Location, const FRotator& Rotation) override;
-	
 	virtual TObjectPtr<UPrimitiveComponent> GetCollisionComponent() const override;
 
 	virtual FVector GetVelocity() const override;
@@ -125,4 +125,7 @@ private:
 
 	UFUNCTION()
 	void OnMovement(float DeltaSeconds, FVector OldLocation, FVector OldVelocity);
+
+	void UpdateRotation(const float DeltaSeconds);
+	float GetUpdatedAngle(const float DeltaSeconds, float InitialAngle, const float UpdateRate);
 };

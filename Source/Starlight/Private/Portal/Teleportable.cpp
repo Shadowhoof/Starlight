@@ -9,23 +9,21 @@
 #include "Statics/StarlightStatics.h"
 
 
-bool ITeleportable::Teleport(const FVector& Location, const FRotator& Rotation)
+void ITeleportable::Teleport(TObjectPtr<APortal> SourcePortal, TObjectPtr<APortal> TargetPortal)
 {
-	const FVector RelativeVelocity = GetRotation().UnrotateVector(GetVelocity());
-	
-	UE_LOG(LogPortal, VeryVerbose, TEXT("Rot before tp: %s, Vel before tp: %s, Relative vel: %s"),
-	       *FRotator().ToCompactString(), *FRotator().ToCompactString(), *FRotator().ToCompactString());
-	
-	const bool bHasTeleported = SetTeleportLocationAndRotation(Location, Rotation);
-	if (bHasTeleported)
-	{
-		SetVelocity(GetRotation().RotateVector(RelativeVelocity));
-		
-		UE_LOG(LogPortal, VeryVerbose, TEXT("Rot after tp: %s, Vel after tp: %s"),
-		       *GetRotation().ToCompactString(), *GetVelocity().ToCompactString());
-	}
+	AActor* AsActor = CastToTeleportableActor();
+	const FVector NewLocation = SourcePortal->TeleportLocation(AsActor->GetActorLocation());
+	const FRotator NewRotation = SourcePortal->TeleportRotation(AsActor->GetActorQuat());
+	const FVector NewVelocity = SourcePortal->TeleportVelocity(GetVelocity());
 
-	return bHasTeleported;
+	const bool bHasTeleported = AsActor->TeleportTo(NewLocation, NewRotation);
+	if (!bHasTeleported)
+	{
+		UE_LOG(LogPortal, Error, TEXT("Actor %s failed to teleport"), *AsActor->GetName());
+		return;
+	}
+	
+	SetVelocity(NewVelocity);
 }
 
 void ITeleportable::EnableCollisionWith(TObjectPtr<APortalSurface> PortalSurface)
@@ -92,17 +90,6 @@ TScriptInterface<ITeleportable> ITeleportable::GetTeleportableScriptInterface()
 	ScriptInterface.SetInterface(this);
 	ScriptInterface.SetObject(CastToTeleportableActor());
 	return ScriptInterface;
-}
-
-FRotator ITeleportable::GetTeleportRotation()
-{
-	UE_LOG(LogPortal, Warning, TEXT("ITeleportable::GetTeleportRotation is not overriden"));
-	return FRotator::ZeroRotator;
-}
-
-bool ITeleportable::SetTeleportLocationAndRotation(const FVector& Location, const FRotator& Rotation)
-{
-	return false;
 }
 
 TObjectPtr<UPrimitiveComponent> ITeleportable::GetCollisionComponent() const

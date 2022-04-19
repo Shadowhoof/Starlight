@@ -22,9 +22,10 @@ class STARLIGHT_API ITeleportable
 	GENERATED_BODY()
 
 public:
-	/** Teleports an object through a portal */
-	virtual bool Teleport(const FVector& Location, const FRotator& Rotation);
-
+	
+	/** Teleports an object from source portal to target portal */
+	virtual void Teleport(TObjectPtr<APortal> SourcePortal, TObjectPtr<APortal> TargetPortal);
+	
 	/** Enables collision with provided portal surface.  */
 	virtual void EnableCollisionWith(TObjectPtr<APortalSurface> PortalSurface);
 
@@ -48,14 +49,7 @@ public:
 
 	TScriptInterface<ITeleportable> GetTeleportableScriptInterface();
 
-	/**
-	 * Value returned by this function will be used to calculate relative rotation in relation to the portal and the
-	 * result will be passed to Teleport function
-	 */
-	virtual FRotator GetTeleportRotation();
-
 protected:
-	virtual bool SetTeleportLocationAndRotation(const FVector& Location, const FRotator& Rotation);
 
 	virtual TObjectPtr<UPrimitiveComponent> GetCollisionComponent() const;
 

@@ -1,4 +1,3 @@
-
 #include "Core/StarlightCharacter.h"
 
 #include "Components/CapsuleComponent.h"
@@ -15,10 +14,10 @@
 #include "Statics/StarlightStatics.h"
 
 
-namespace TeleportConstants
+namespace Constants
 {
-	const float TeleportTraceDistance = 100000.f;
-	const float HitLocationOffset = 50.f;
+	const float RollUpdateRate = 360.f;		/* Roll change per second if it's different from 0.0 */
+	const float PitchUpdateRate = 360.f;	/* Pitch change per second for actor if it's different from 0.0 */
 }
 
 
@@ -27,11 +26,11 @@ AStarlightCharacter::AStarlightCharacter()
 	CameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("CameraComponent"));
 	CameraComponent->bLockToHmd = true;
 	CameraComponent->SetupAttachment(RootComponent);
-	
+
 	LeftController = CreateDefaultSubobject<UMotionControllerComponent>(TEXT("LeftController"));
 	LeftController->SetTrackingSource(EControllerHand::Left);
 	LeftController->SetupAttachment(RootComponent);
-	
+
 	RightController = CreateDefaultSubobject<UMotionControllerComponent>(TEXT("RightController"));
 	FVector MirroredScale = RightController->GetRelativeScale3D();
 	MirroredScale.Y *= -1;
@@ -97,20 +96,30 @@ void AStarlightCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	PlayerInputComponent->BindAxis("MoveRight", this, &AStarlightCharacter::MoveRight);
 
 	DECLARE_DELEGATE_OneParam(FGrabDelegate, EControllerHand)
-	PlayerInputComponent->BindAction<FGrabDelegate>("GrabLeft", IE_Pressed, this, &AStarlightCharacter::Grab, EControllerHand::Left);
-	PlayerInputComponent->BindAction<FGrabDelegate>("GrabLeft", IE_Released, this, &AStarlightCharacter::ReleaseGrab, EControllerHand::Left);
-	PlayerInputComponent->BindAction<FGrabDelegate>("GrabRight", IE_Pressed, this, &AStarlightCharacter::Grab, EControllerHand::Right);
-	PlayerInputComponent->BindAction<FGrabDelegate>("GrabRight", IE_Released, this, &AStarlightCharacter::ReleaseGrab, EControllerHand::Right);
-	PlayerInputComponent->BindAction<FGrabDelegate>("GrabSpecial", IE_Pressed, this, &AStarlightCharacter::Grab, EControllerHand::Special_1);
-	PlayerInputComponent->BindAction<FGrabDelegate>("GrabSpecial", IE_Released, this, &AStarlightCharacter::ReleaseGrab, EControllerHand::Special_1);
+	PlayerInputComponent->BindAction<FGrabDelegate>("GrabLeft", IE_Pressed, this, &AStarlightCharacter::Grab,
+	                                                EControllerHand::Left);
+	PlayerInputComponent->BindAction<FGrabDelegate>("GrabLeft", IE_Released, this, &AStarlightCharacter::ReleaseGrab,
+	                                                EControllerHand::Left);
+	PlayerInputComponent->BindAction<FGrabDelegate>("GrabRight", IE_Pressed, this, &AStarlightCharacter::Grab,
+	                                                EControllerHand::Right);
+	PlayerInputComponent->BindAction<FGrabDelegate>("GrabRight", IE_Released, this, &AStarlightCharacter::ReleaseGrab,
+	                                                EControllerHand::Right);
+	PlayerInputComponent->BindAction<FGrabDelegate>("GrabSpecial", IE_Pressed, this, &AStarlightCharacter::Grab,
+	                                                EControllerHand::Special_1);
+	PlayerInputComponent->BindAction<FGrabDelegate>("GrabSpecial", IE_Released, this, &AStarlightCharacter::ReleaseGrab,
+	                                                EControllerHand::Special_1);
 
 	DECLARE_DELEGATE_OneParam(FSnapTurnDelegate, float)
-	PlayerInputComponent->BindAction<FSnapTurnDelegate>("SnapTurnLeft", IE_Pressed, this, &AStarlightCharacter::SnapTurn, -1.f);
-	PlayerInputComponent->BindAction<FSnapTurnDelegate>("SnapTurnRight", IE_Pressed, this, &AStarlightCharacter::SnapTurn, 1.f);
+	PlayerInputComponent->BindAction<FSnapTurnDelegate>("SnapTurnLeft", IE_Pressed, this,
+	                                                    &AStarlightCharacter::SnapTurn, -1.f);
+	PlayerInputComponent->BindAction<FSnapTurnDelegate>("SnapTurnRight", IE_Pressed, this,
+	                                                    &AStarlightCharacter::SnapTurn, 1.f);
 
 	DECLARE_DELEGATE_OneParam(FShootPortalDelegate, EPortalType)
-	PlayerInputComponent->BindAction<FShootPortalDelegate>("ShootPortalOne", IE_Pressed, this, &AStarlightCharacter::ShootPortal, EPortalType::First);
-	PlayerInputComponent->BindAction<FShootPortalDelegate>("ShootPortalTwo", IE_Pressed, this, &AStarlightCharacter::ShootPortal, EPortalType::Second);
+	PlayerInputComponent->BindAction<FShootPortalDelegate>("ShootPortalOne", IE_Pressed, this,
+	                                                       &AStarlightCharacter::ShootPortal, EPortalType::First);
+	PlayerInputComponent->BindAction<FShootPortalDelegate>("ShootPortalTwo", IE_Pressed, this,
+	                                                       &AStarlightCharacter::ShootPortal, EPortalType::Second);
 }
 
 TObjectPtr<APlayerController> AStarlightCharacter::GetPlayerController() const
@@ -121,19 +130,6 @@ TObjectPtr<APlayerController> AStarlightCharacter::GetPlayerController() const
 TObjectPtr<UCameraComponent> AStarlightCharacter::GetCameraComponent() const
 {
 	return CameraComponent;
-}
-
-bool AStarlightCharacter::SetTeleportLocationAndRotation(const FVector& Location, const FRotator& Rotation)
-{
-	const FRotator NewActorRotation = FRotator(0.f, Rotation.Yaw, 0.f);
-	if (!TeleportTo(Location, NewActorRotation))
-	{
-		return false;
-	}
-
-	const FRotator NewControlRotation = FRotator(Rotation.Pitch, Rotation.Yaw, 0.f);
-	GetController()->SetControlRotation(NewControlRotation);
-	return true;
 }
 
 TObjectPtr<UPrimitiveComponent> AStarlightCharacter::GetCollisionComponent() const
@@ -163,7 +159,7 @@ void AStarlightCharacter::LookRight(const float Rate)
 
 void AStarlightCharacter::SnapTurn(const float Sign)
 {
-	AddControllerYawInput(Sign * SnapTurnDegrees);			
+	AddControllerYawInput(Sign * SnapTurnDegrees);
 }
 
 void AStarlightCharacter::MoveForward(const float Rate)
@@ -185,7 +181,7 @@ void AStarlightCharacter::MoveRight(const float Rate)
 {
 	if (MovementType == EMovementType::Continuous)
 	{
-		AddMovementInput(GetMovementRightVector(), Rate);	
+		AddMovementInput(GetMovementRightVector(), Rate);
 	}
 }
 
@@ -211,6 +207,20 @@ FVector AStarlightCharacter::GetMovementRightVector() const
 	return AverageDirection.GetSafeNormal2D();
 }
 
+void AStarlightCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	UpdateRotation(DeltaSeconds);
+}
+
+void AStarlightCharacter::Teleport(TObjectPtr<APortal> SourcePortal, TObjectPtr<APortal> TargetPortal)
+{
+	const FRotator NewControlRotation = SourcePortal->TeleportRotation(GetControlRotation());
+	ITeleportable::Teleport(SourcePortal, TargetPortal);
+	GetController()->SetControlRotation(NewControlRotation);
+}
+
 void AStarlightCharacter::OnOverlapWithPortalBegin(TObjectPtr<APortal> Portal)
 {
 	ensure(!OverlappingPortals.Contains(Portal));
@@ -223,11 +233,6 @@ void AStarlightCharacter::OnOverlapWithPortalEnd(TObjectPtr<APortal> Portal)
 	ensure(OverlappingPortals.Contains(Portal));
 	ITeleportable::OnOverlapWithPortalEnd(Portal);
 	OverlappingPortals.Remove(Portal);
-}
-
-FRotator AStarlightCharacter::GetTeleportRotation()
-{
-	return GetControlRotation();
 }
 
 void AStarlightCharacter::Grab(EControllerHand Hand)
@@ -264,3 +269,29 @@ void AStarlightCharacter::OnMovement(float DeltaSeconds, FVector OldLocation, FV
 	}
 }
 
+void AStarlightCharacter::UpdateRotation(const float DeltaSeconds)
+{
+	FRotator ActorRotation = GetActorRotation();
+	if (!FMath::IsNearlyZero(ActorRotation.Pitch) || !FMath::IsNearlyZero(ActorRotation.Roll))
+	{
+		ActorRotation.Pitch = GetUpdatedAngle(DeltaSeconds, ActorRotation.Pitch, Constants::PitchUpdateRate);
+		ActorRotation.Roll = GetUpdatedAngle(DeltaSeconds, ActorRotation.Roll, Constants::RollUpdateRate);
+		SetActorRotation(ActorRotation);
+	}
+
+	FRotator ControlRotation = GetControlRotation();
+	if (!FMath::IsNearlyZero(ControlRotation.Roll))
+	{
+		ControlRotation.Roll = GetUpdatedAngle(DeltaSeconds, ControlRotation.Roll, Constants::RollUpdateRate);
+		GetController()->SetControlRotation(ControlRotation);
+	}
+}
+
+float AStarlightCharacter::GetUpdatedAngle(const float DeltaSeconds, float InitialAngle, const float UpdateRate)
+{
+	InitialAngle = FRotator::NormalizeAxis(InitialAngle);
+	const float DeltaAngle = DeltaSeconds * Constants::RollUpdateRate;
+	return InitialAngle > 0.f
+		       ? FMath::Max(InitialAngle - DeltaAngle, 0.f)
+		       : FMath::Min(InitialAngle + DeltaAngle, 0.f);
+}

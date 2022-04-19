@@ -22,8 +22,6 @@ public:
 
 	virtual TObjectPtr<UPrimitiveComponent> GetAttachComponent() const override;
 
-	virtual FRotator GetTeleportRotation() override;
-	
 protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "StaticMesh")
@@ -31,8 +29,6 @@ protected:
 
 protected:
 
-	virtual bool SetTeleportLocationAndRotation(const FVector& Location, const FRotator& Rotation) override;
-	
 	virtual TObjectPtr<UPrimitiveComponent> GetCollisionComponent() const override;
 
 	virtual FVector GetVelocity() const override;

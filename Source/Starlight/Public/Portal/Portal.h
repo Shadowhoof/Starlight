@@ -56,6 +56,11 @@ public:
 
 	void OnActorMoved(TObjectPtr<ITeleportable> Actor);
 
+	FVector TeleportLocation(const FVector& Location);
+	FRotator TeleportRotation(const FQuat& Quat);
+	FRotator TeleportRotation(const FRotator& Rotator);
+	FVector TeleportVelocity(const FVector& Velocity);
+
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Portal")
 	TObjectPtr<UStaticMeshComponent> PortalMesh;

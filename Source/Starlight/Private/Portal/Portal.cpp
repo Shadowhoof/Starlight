@@ -162,6 +162,44 @@ void APortal::OnActorMoved(TObjectPtr<ITeleportable> Actor)
 	}
 }
 
+FVector APortal::TeleportLocation(const FVector& Location)
+{
+	if (!OtherPortal)
+	{
+		return Location;
+	}
+	
+	const FVector RelativeLocation = BackfacingComponent->GetComponentTransform().InverseTransformPosition(Location);
+	return OtherPortal->GetTransform().TransformPosition(RelativeLocation);
+}
+
+FRotator APortal::TeleportRotation(const FQuat& Quat)
+{
+	if (!OtherPortal)
+	{
+		return Quat.Rotator();
+	}
+	
+	const FQuat RelativeQuat = BackfacingComponent->GetComponentQuat().Inverse() * Quat;
+	return (OtherPortal->GetActorQuat() * RelativeQuat).Rotator();
+}
+
+FRotator APortal::TeleportRotation(const FRotator& Rotator)
+{
+	return TeleportRotation(FQuat(Rotator));
+}
+
+FVector APortal::TeleportVelocity(const FVector& Velocity)
+{
+	if (!OtherPortal)
+	{
+		return Velocity;
+	}
+	
+	const FVector RelativeVelocity = BackfacingComponent->GetComponentQuat().UnrotateVector(Velocity);
+	return OtherPortal->GetActorQuat().RotateVector(RelativeVelocity);
+}
+
 void APortal::BeginPlay()
 {
 	Super::BeginPlay();
@@ -220,19 +258,9 @@ void APortal::OnActorEndOverlap(TObjectPtr<AActor> Actor)
 
 void APortal::TeleportActor(TObjectPtr<ITeleportable> TeleportingActor)
 {
-	const AActor* Actor = TeleportingActor->CastToTeleportableActor();
-	
-	const FRotator RelativeRotation = TeleportingActor->GetTeleportRotation() - BackfacingComponent->GetComponentRotation();
-	const FRotator NewRotation = OtherPortal->GetActorRotation() + RelativeRotation;
-	
-	// TODO: this probably will have to be reworked slightly for wall-to-floor portals
-	const FVector RelativeLocation = BackfacingComponent->GetComponentTransform().InverseTransformPosition(Actor->GetActorLocation());
-	const FVector NewLocation = OtherPortal->GetTransform().TransformPosition(RelativeLocation);
-	
 	OtherPortal->PrepareForActorTeleport(TeleportingActor);
-	TeleportingActor->Teleport(NewLocation, NewRotation);
-	
-	UE_LOG(LogPortal, Verbose, TEXT("Portal %s has teleported actor %s"), *GetName(), *Actor->GetName());
+	TeleportingActor->Teleport(this, OtherPortal);
+	UE_LOG(LogPortal, Verbose, TEXT("Portal %s has teleported actor %s"), *GetName(), *TeleportingActor->CastToTeleportableActor()->GetName());
 }
 
 bool APortal::ShouldTeleportActor(TObjectPtr<ITeleportable> TeleportingActor, const FVector PortalNormal) const
