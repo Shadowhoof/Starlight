@@ -15,14 +15,10 @@ public:
 	
 	APortalSurface();
 
-	/** Returns total surface size from one corner to the opposite. */
-	FVector GetSize() const;
-
-	/** Returns a vector containing distance from center to corner. */
-	FVector GetExtents() const;
-
 	bool CanFitPortal() const;
 
+	bool GetPortalLocation(const FHitResult& HitResult, FVector& OutLocation, FVector& OutLocalCoords, FVector& OutExtents, FRotator& OutRotation);
+	
 	/**
 	 * Returns components that teleportable actor has to disable collision with in order to pass through the portal.
 	 * Can include portal's own components as well as components of the surface it is attached to.
@@ -39,7 +35,15 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Portal")
 	TObjectPtr<AActor> AttachedSurface;
 
+	/**
+	 * Indicates whether portal is always created at a certain orientation which is the same as surface orientation.
+	 * If <code>false</code> then portal orientation is determined by player orientation when portal is created.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Portal")
+	bool bFixedOrientation = true;
+	
 	FVector Size;
+	FVector Extents;
 
 	bool bCanFitPortal = false;
 	

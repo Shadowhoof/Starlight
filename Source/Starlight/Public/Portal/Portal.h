@@ -28,9 +28,10 @@ public:
 	 *	Fills out portal data. Must be called immediately after creating a new portal.
 	 *	@param Surface actor the portal is attached to
 	 *	@param InLocalCoords local coordinates of portal within portal surface
+	 *	@param InExtents rectangle (YZ) space occupied by portal on the surface (in surface local space)
 	 *	@param InPortalType type of created portal (either first or second)
 	 */
-	void Initialize(const TObjectPtr<APortalSurface> Surface, FVector InLocalCoords, EPortalType InPortalType);
+	void Initialize(const TObjectPtr<APortalSurface> Surface, FVector InLocalCoords, FVector InExtents, EPortalType InPortalType);
 
 	/** Returns surface the portal is attached to. */
 	TObjectPtr<APortalSurface> GetPortalSurface() const;
@@ -38,6 +39,9 @@ public:
 	/** Returns portal local coordinates within portal surface. */
 	FVector GetLocalCoords() const;
 
+	/** Returns rectangle (YZ) space occupied by portal on the surface (in surface local space). */
+	FVector GetExtents() const;
+	
 	/**
 	 *	Sets render targets for portal
 	 *	@param ReadTarget render target that will be used as portal material
@@ -87,8 +91,8 @@ private:
 	UPROPERTY()
 	TObjectPtr<APortal> OtherPortal = nullptr;
 
-	UPROPERTY()
 	FVector LocalCoords;
+	FVector Extents;
 
 	UPROPERTY()
 	TObjectPtr<UMaterialInstanceDynamic> DynamicInstance = nullptr;

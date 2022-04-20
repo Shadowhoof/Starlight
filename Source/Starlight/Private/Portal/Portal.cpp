@@ -13,6 +13,12 @@
 #include "Portal/Teleportable.h"
 
 
+static TAutoConsoleVariable CVarDebugDrawPortals(
+                                                 TEXT("Portal.DebugDraw"),
+                                                 false,
+                                                 TEXT("Enables debug draw for portal-related stuff"));
+
+
 APortal::APortal()
 {
 	PrimaryActorTick.bCanEverTick = true;
@@ -47,29 +53,49 @@ void APortal::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	if (!OtherPortal || ActorsInPortalRange.Num() == 0)
+	if (OtherPortal && ActorsInPortalRange.Num() > 0)
 	{
-		return;
-	}
-
-	const FVector PortalNormal = GetActorRotation().Vector();
-	TArray<ITeleportable*> TeleportingActors;
-	for (TScriptInterface<ITeleportable> ScriptInterface : ActorsInPortalRange)
-	{
-		ITeleportable* Teleportable = ScriptInterface.GetInterface();
-		if (ShouldTeleportActor(Teleportable, PortalNormal))
+		const FVector PortalNormal = GetActorRotation().Vector();
+		TArray<ITeleportable*> TeleportingActors;
+		for (TScriptInterface<ITeleportable> ScriptInterface : ActorsInPortalRange)
 		{
-			TeleportingActors.Add(Teleportable);
+			ITeleportable* Teleportable = ScriptInterface.GetInterface();
+			if (ShouldTeleportActor(Teleportable, PortalNormal))
+			{
+				TeleportingActors.Add(Teleportable);
+			}
+		}
+
+		for (ITeleportable* Teleportable : TeleportingActors)
+		{
+			TeleportActor(Teleportable);
 		}
 	}
 
-	for (ITeleportable* Teleportable : TeleportingActors)
+#if ENABLE_DRAW_DEBUG
+	if (CVarDebugDrawPortals.GetValueOnGameThread())
 	{
-		TeleportActor(Teleportable);
+		const UWorld* World = GetWorld();
+		const FTransform SurfaceSpaceTransform = {PortalSurface->GetActorQuat(), GetActorLocation()};
+
+		const FVector TopLeft = SurfaceSpaceTransform.TransformPosition({0.f, -Extents.Y, Extents.Z});
+		const FVector TopRight = SurfaceSpaceTransform.TransformPosition({0.f, Extents.Y, Extents.Z});
+		const FVector BottomRight = SurfaceSpaceTransform.TransformPosition({0.f, Extents.Y, -Extents.Z});
+		const FVector BottomLeft = SurfaceSpaceTransform.TransformPosition({0.f, -Extents.Y, -Extents.Z});
+		DrawDebugLine(World, TopLeft, TopRight, FColor::Blue, false, - 1, 0, 1.f);
+		DrawDebugLine(World, TopRight, BottomRight, FColor::Blue, false, - 1, 0, 1.f);
+		DrawDebugLine(World, BottomRight, BottomLeft, FColor::Blue, false, - 1, 0, 1.f);
+		DrawDebugLine(World, BottomLeft, TopLeft, FColor::Blue, false, - 1, 0, 1.f);
+
+		const FVector Center = GetActorLocation();
+		DrawDebugDirectionalArrow(World, Center, Center + GetActorUpVector() * PortalConstants::HalfSize.Z,
+		                          20.f, FColor::Red, false, -1, 0, 1.f);
 	}
+#endif
 }
 
-void APortal::Initialize(const TObjectPtr<APortalSurface> Surface, FVector InLocalCoords, EPortalType InPortalType)
+void APortal::Initialize(const TObjectPtr<APortalSurface> Surface, FVector InLocalCoords, FVector InExtents,
+                         EPortalType InPortalType)
 {
 	if (PortalSurface)
 	{
@@ -86,6 +112,7 @@ void APortal::Initialize(const TObjectPtr<APortalSurface> Surface, FVector InLoc
 	PortalSurface = Surface;
 	LocalCoords = InLocalCoords;
 	PortalType = InPortalType;
+	Extents = InExtents;
 
 	// hide attached surface's mesh when capturing scene so it doesn't occlude the view
 	if (UPrimitiveComponent* SurfaceCollisionComp = PortalSurface->GetAttachedSurfaceComponent())
@@ -102,6 +129,11 @@ TObjectPtr<APortalSurface> APortal::GetPortalSurface() const
 FVector APortal::GetLocalCoords() const
 {
 	return LocalCoords;
+}
+
+FVector APortal::GetExtents() const
+{
+	return Extents;
 }
 
 void APortal::SetRenderTargets(TObjectPtr<UTextureRenderTarget2D> ReadTarget,
@@ -142,7 +174,7 @@ void APortal::SetConnectedPortal(TObjectPtr<APortal> Portal)
 			Teleportable->OnOverlapWithPortalBegin(this);
 		}
 	}
-	
+
 	OtherPortal = Portal;
 }
 
@@ -168,7 +200,7 @@ FVector APortal::TeleportLocation(const FVector& Location)
 	{
 		return Location;
 	}
-	
+
 	const FVector RelativeLocation = BackfacingComponent->GetComponentTransform().InverseTransformPosition(Location);
 	return OtherPortal->GetTransform().TransformPosition(RelativeLocation);
 }
@@ -179,7 +211,7 @@ FRotator APortal::TeleportRotation(const FQuat& Quat)
 	{
 		return Quat.Rotator();
 	}
-	
+
 	const FQuat RelativeQuat = BackfacingComponent->GetComponentQuat().Inverse() * Quat;
 	return (OtherPortal->GetActorQuat() * RelativeQuat).Rotator();
 }
@@ -195,7 +227,7 @@ FVector APortal::TeleportVelocity(const FVector& Velocity)
 	{
 		return Velocity;
 	}
-	
+
 	const FVector RelativeVelocity = BackfacingComponent->GetComponentQuat().UnrotateVector(Velocity);
 	return OtherPortal->GetActorQuat().RotateVector(RelativeVelocity);
 }
@@ -260,12 +292,14 @@ void APortal::TeleportActor(TObjectPtr<ITeleportable> TeleportingActor)
 {
 	OtherPortal->PrepareForActorTeleport(TeleportingActor);
 	TeleportingActor->Teleport(this, OtherPortal);
-	UE_LOG(LogPortal, Verbose, TEXT("Portal %s has teleported actor %s"), *GetName(), *TeleportingActor->CastToTeleportableActor()->GetName());
+	UE_LOG(LogPortal, Verbose, TEXT("Portal %s has teleported actor %s"), *GetName(),
+	       *TeleportingActor->CastToTeleportableActor()->GetName());
 }
 
 bool APortal::ShouldTeleportActor(TObjectPtr<ITeleportable> TeleportingActor, const FVector PortalNormal) const
 {
-	const FVector ToActorDirection = (TeleportingActor->CastToTeleportableActor()->GetActorLocation() - GetActorLocation()).
+	const FVector ToActorDirection = (TeleportingActor->CastToTeleportableActor()->GetActorLocation() -
+			GetActorLocation()).
 		GetSafeNormal();
 	return ToActorDirection.Dot(PortalNormal) < 0.f;
 }

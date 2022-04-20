@@ -39,13 +39,15 @@ void UPortalComponent::ShootPortal(EPortalType PortalType, const FVector& StartL
 	}
 
 	TObjectPtr<APortalSurface> PortalSurface = Cast<APortalSurface>(HitResult.GetActor());
-	if (!PortalSurface || !PortalSurface->CanFitPortal())
+	if (!PortalSurface)
 	{
 		return;
 	}
 
-	FVector PortalLocation, LocalCoords;
-	if (!ValidatePortalLocation(PortalType, HitResult, PortalSurface, PortalLocation, LocalCoords))
+	FVector PortalLocation, PortalLocalCoords, PortalExtents;
+	FRotator PortalRotation;
+	if (!ValidatePortalLocation(PortalType, HitResult, PortalSurface, PortalLocation, PortalLocalCoords, PortalRotation,
+	                            PortalExtents))
 	{
 		UE_LOG(LogPortal, Verbose,
 		       TEXT("Could not spawn portal at location %s because it's overlapping with another portal"),
@@ -53,7 +55,6 @@ void UPortalComponent::ShootPortal(EPortalType PortalType, const FVector& StartL
 		return;
 	}
 
-	FRotator PortalRotation = PortalSurface->GetActorRotation();
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 	TSubclassOf<APortal> PortalClass = PortalClasses[PortalType];
@@ -61,7 +62,7 @@ void UPortalComponent::ShootPortal(EPortalType PortalType, const FVector& StartL
 	const FTransform SpawnTransform = FTransform(PortalRotation, PortalLocation);
 	TObjectPtr<APortal> Portal = GetWorld()->SpawnActorDeferred<APortal>(PortalClass, SpawnTransform, nullptr, nullptr,
 	                                                                     ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
-	Portal->Initialize(PortalSurface, LocalCoords, PortalType);
+	Portal->Initialize(PortalSurface, PortalLocalCoords, PortalExtents, PortalType);
 	UGameplayStatics::FinishSpawningActor(Portal, SpawnTransform);
 
 	const bool bThisPortalExisted = ActivePortals[PortalType] != nullptr;
@@ -131,24 +132,20 @@ void UPortalComponent::BeginPlay()
 
 bool UPortalComponent::ValidatePortalLocation(EPortalType PortalType, const FHitResult& HitResult,
                                               TObjectPtr<APortalSurface> Surface, FVector& OutLocation,
-                                              FVector& OutLocalCoords) const
+                                              FVector& OutLocalCoords, FRotator& OutRotation, FVector& OutExtents) const
 {
-	const FTransform SurfaceTransform = Surface->GetActorTransform();
-	const FVector SurfaceExtents = Surface->GetExtents();
+	const bool bPortalFits = Surface->
+		GetPortalLocation(HitResult, OutLocation, OutLocalCoords, OutExtents, OutRotation);
+	if (!bPortalFits)
+	{
+		return false;
+	}
 
-	const float YLimit = SurfaceExtents.Y - PortalConstants::HalfSize.Y;
-	const float ZLimit = SurfaceExtents.Z - PortalConstants::HalfSize.Z;
-	OutLocalCoords = SurfaceTransform.InverseTransformPositionNoScale(HitResult.Location);
-	OutLocalCoords.Y = FMath::Clamp(OutLocalCoords.Y, -YLimit, YLimit);
-	OutLocalCoords.Z = FMath::Clamp(OutLocalCoords.Z, -ZLimit, ZLimit);
-
-	OutLocation = SurfaceTransform.TransformPositionNoScale(OutLocalCoords) + HitResult.Normal *
-		PortalConstants::OffsetFromSurface;
-	return !IsOverlappingWithOtherPortal(PortalType, Surface, OutLocalCoords);
+	return !IsOverlappingWithOtherPortal(PortalType, Surface, OutLocalCoords, OutExtents);
 }
 
 bool UPortalComponent::IsOverlappingWithOtherPortal(EPortalType PortalType, TObjectPtr<APortalSurface> PortalSurface,
-                                                    const FVector& LocalCoords) const
+                                                    const FVector& LocalCoords, const FVector& Extents) const
 {
 	const TObjectPtr<APortal> OtherPortal = ActivePortals[GetOtherPortalType(PortalType)];
 	if (!OtherPortal)
@@ -162,6 +159,7 @@ bool UPortalComponent::IsOverlappingWithOtherPortal(EPortalType PortalType, TObj
 	}
 
 	const FVector OtherLocalCoords = OtherPortal->GetLocalCoords();
-	return FMath::Abs(OtherLocalCoords.Y - LocalCoords.Y) < PortalConstants::Size.Y &&
-		FMath::Abs(OtherLocalCoords.Z - LocalCoords.Z) < PortalConstants::Size.Z;
+	const FVector OtherPortalExtents = OtherPortal->GetExtents();
+	return FMath::Abs(OtherLocalCoords.Y - LocalCoords.Y) < OtherPortalExtents.Y + Extents.Y &&
+		FMath::Abs(OtherLocalCoords.Z - LocalCoords.Z) < OtherPortalExtents.Z + Extents.Z;
 }

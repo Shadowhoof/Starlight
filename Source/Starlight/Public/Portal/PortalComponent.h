@@ -42,8 +42,8 @@ private:
 	TObjectPtr<ACharacter> OwnerCharacter;
 	
 	bool ValidatePortalLocation(EPortalType PortalType, const FHitResult& HitResult, TObjectPtr<APortalSurface> Surface,
-	                            FVector& OutLocation, FVector& OutLocalCoords) const;
+	                            FVector& OutLocation, FVector& OutLocalCoords, FRotator& OutRotation, FVector& OutExtents) const;
 
 	bool IsOverlappingWithOtherPortal(EPortalType PortalType, TObjectPtr<APortalSurface> Surface,
-	                                  const FVector& LocalCoords) const;
+	                                  const FVector& LocalCoords, const FVector& Extents) const;
 };
