@@ -16,7 +16,7 @@ void ITeleportable::Teleport(TObjectPtr<APortal> SourcePortal, TObjectPtr<APorta
 	const FRotator NewRotation = SourcePortal->TeleportRotation(AsActor->GetActorQuat());
 	const FVector NewVelocity = SourcePortal->TeleportVelocity(GetVelocity());
 
-	const bool bHasTeleported = AsActor->TeleportTo(NewLocation, NewRotation);
+	const bool bHasTeleported = AsActor->TeleportTo(NewLocation, NewRotation, false, true);
 	if (!bHasTeleported)
 	{
 		UE_LOG(LogPortal, Error, TEXT("Actor %s failed to teleport"), *AsActor->GetName());

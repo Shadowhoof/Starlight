@@ -92,7 +92,7 @@ void UPortalComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	if (!ActivePortals[EPortalType::First] || !ActivePortals[EPortalType::Second])
+	if (!AreBothPortalsActive())
 	{
 		return;
 	}
@@ -101,6 +101,26 @@ void UPortalComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	const TObjectPtr<APortal> SecondPortal = ActivePortals[EPortalType::Second];
 	FirstPortal->UpdateSceneCaptureTransform(SecondPortal->GetBackfacingRelativeTransform(OwnerCharacter));
 	SecondPortal->UpdateSceneCaptureTransform(FirstPortal->GetBackfacingRelativeTransform(OwnerCharacter));
+}
+
+void UPortalComponent::DebugSpawnObjectInPortal(TSubclassOf<AActor> Class)
+{
+	if (!AreBothPortalsActive())
+	{
+		return;
+	}
+
+	const APortal* Portal = ActivePortals[EPortalType::First];
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	const FVector Location = Portal->GetActorLocation() + Portal->GetActorForwardVector() * 5.f - Portal->GetActorUpVector() * 75.f;
+	const FRotator Rotation = Portal->GetActorRotation();
+	GetWorld()->SpawnActor(Class, &Location, &Rotation, SpawnParams);
+}
+
+bool UPortalComponent::AreBothPortalsActive() const
+{
+	return ActivePortals[EPortalType::First] && ActivePortals[EPortalType::Second];
 }
 
 void UPortalComponent::BeginPlay()

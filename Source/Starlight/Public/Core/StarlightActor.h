@@ -22,16 +22,35 @@ public:
 
 	virtual TObjectPtr<UPrimitiveComponent> GetAttachComponent() const override;
 
+	virtual void OnOverlapWithPortalBegin(TObjectPtr<APortal> Portal) override;
+	virtual void OnOverlapWithPortalEnd(TObjectPtr<APortal> Portal) override;
+
+	virtual void Tick(float DeltaSeconds) override;
+	
 protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "StaticMesh")
 	TObjectPtr<UStaticMeshComponent> StaticMeshComponent;
 
+	UPROPERTY()
+	TObjectPtr<UMaterialInstanceDynamic> DynamicMaterialInstance;
+
 protected:
 
+	virtual void BeginPlay() override;
+	
 	virtual TObjectPtr<UPrimitiveComponent> GetCollisionComponent() const override;
 
 	virtual FVector GetVelocity() const override;
 	virtual void SetVelocity(const FVector& Velocity) override;
+
+private:
+
+	UPROPERTY()
+	TArray<TObjectPtr<APortal>> OverlappingPortals;
+	
+private:
+
+	void UpdateMaterialParameters();
 
 };

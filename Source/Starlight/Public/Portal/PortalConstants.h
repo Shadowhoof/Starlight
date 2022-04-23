@@ -18,6 +18,12 @@ namespace PortalConstants
 	const FVector HalfSize = Size / 2.f;
 	const float OffsetFromSurface = 0.1f;
 	const FVector BorderCollisionExtent = {50.f, 90.f, 125.f};
+
+	/* material parameter names */
+	
+	const FName InRangeParam = "IsInPortalRange";
+	const FName LocationParam = "PortalLocation";
+	const FName NormalParam = "PortalNormal";
 }
 
 inline EPortalType GetOtherPortalType(EPortalType PortalType)
