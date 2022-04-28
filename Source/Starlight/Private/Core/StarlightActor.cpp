@@ -3,6 +3,7 @@
 
 #include "Core/StarlightActor.h"
 
+#include "Portal/TeleportableCopy.h"
 #include "Portal/Portal.h"
 
 AStarlightActor::AStarlightActor()
@@ -46,6 +47,16 @@ void AStarlightActor::Tick(float DeltaSeconds)
 	}
 }
 
+TObjectPtr<ATeleportableCopy> AStarlightActor::CreatePortalCopy(const FTransform& SpawnTransform,
+                                                                TObjectPtr<APortal> Portal, TObjectPtr<AActor> ParentActor)
+{
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	ATeleportableCopy* Copy = GetWorld()->SpawnActor<ATeleportableCopy>(ATeleportableCopy::StaticClass(), SpawnTransform, SpawnParams);
+	Copy->Initialize(ParentActor, StaticMeshComponent->GetStaticMesh(), Portal->GetPortalType());
+	return Copy;
+}
+
 void AStarlightActor::BeginPlay()
 {
 	Super::BeginPlay();
@@ -73,7 +84,7 @@ void AStarlightActor::UpdateMaterialParameters()
 	const int32 PortalCount = OverlappingPortals.Num();
 	if (PortalCount == 0)
 	{
-		DynamicMaterialInstance->SetScalarParameterValue(PortalConstants::InRangeParam, 0.0);
+		DynamicMaterialInstance->SetScalarParameterValue(PortalConstants::CanBeCulledParam, PortalConstants::FloatFalse);
 		return;
 	}
 
@@ -92,7 +103,7 @@ void AStarlightActor::UpdateMaterialParameters()
 		ClosestPortal = DistToFirst < DistToSecond ? OverlappingPortals[0] : OverlappingPortals[1];
 	}
 
-	DynamicMaterialInstance->SetScalarParameterValue(PortalConstants::InRangeParam, 1.0);
-	DynamicMaterialInstance->SetVectorParameterValue(PortalConstants::LocationParam, ClosestPortal->GetActorLocation());
-	DynamicMaterialInstance->SetVectorParameterValue(PortalConstants::NormalParam, ClosestPortal->GetActorForwardVector());
+	DynamicMaterialInstance->SetScalarParameterValue(PortalConstants::CanBeCulledParam, PortalConstants::FloatTrue);
+	DynamicMaterialInstance->SetVectorParameterValue(PortalConstants::CullPlaneCenterParam, ClosestPortal->GetActorLocation());
+	DynamicMaterialInstance->SetVectorParameterValue(PortalConstants::CullPlaneNormalParam, ClosestPortal->GetActorForwardVector());
 }

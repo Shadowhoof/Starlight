@@ -8,6 +8,7 @@
 #include "Portal.generated.h"
 
 
+class ATeleportableCopy;
 class ITeleportable;
 class UBoxComponent;
 class APortalSurface;
@@ -33,6 +34,8 @@ public:
 	 */
 	void Initialize(const TObjectPtr<APortalSurface> Surface, FVector InLocalCoords, FVector InExtents, EPortalType InPortalType);
 
+	EPortalType GetPortalType() const;
+	
 	/** Returns surface the portal is attached to. */
 	TObjectPtr<APortalSurface> GetPortalSurface() const;
 
@@ -106,6 +109,9 @@ private:
 	UPROPERTY()
 	TArray<TScriptInterface<ITeleportable>> ActorsInPortalRange;
 
+	UPROPERTY()
+	TMap<int32, TObjectPtr<ATeleportableCopy>> TeleportableCopies;
+
 	EPortalType PortalType;
 	
 private:
@@ -125,4 +131,8 @@ private:
 
 	bool ShouldTeleportActor(TObjectPtr<ITeleportable> TeleportingActor, const FVector PortalNormal) const;
 	bool ShouldTeleportActor(TObjectPtr<ITeleportable> TeleportingActor) const;
+
+	void CreateTeleportableCopy(TObjectPtr<ITeleportable> TeleportingActor);
+	void DeleteTeleportableCopy(int32 ParentObjectId);
+	FTransform CalculateTransformForCopy(TObjectPtr<const AActor> ParentActor) const;
 };

@@ -11,6 +11,7 @@
 #include "Portal/PortalConstants.h"
 #include "Portal/PortalSurface.h"
 #include "Portal/Teleportable.h"
+#include "Portal/TeleportableCopy.h"
 
 
 static TAutoConsoleVariable CVarDebugDrawPortals(
@@ -53,24 +54,35 @@ void APortal::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	if (OtherPortal && ActorsInPortalRange.Num() > 0)
+	if (OtherPortal)
 	{
-		const FVector PortalNormal = GetActorRotation().Vector();
-		TArray<ITeleportable*> TeleportingActors;
-		for (TScriptInterface<ITeleportable> ScriptInterface : ActorsInPortalRange)
+		if (ActorsInPortalRange.Num() > 0)
 		{
-			ITeleportable* Teleportable = ScriptInterface.GetInterface();
-			if (ShouldTeleportActor(Teleportable, PortalNormal))
+			const FVector PortalNormal = GetActorRotation().Vector();
+			TArray<ITeleportable*> TeleportingActors;
+			for (TScriptInterface<ITeleportable> ScriptInterface : ActorsInPortalRange)
 			{
-				TeleportingActors.Add(Teleportable);
+				ITeleportable* Teleportable = ScriptInterface.GetInterface();
+				if (ShouldTeleportActor(Teleportable, PortalNormal))
+				{
+					TeleportingActors.Add(Teleportable);
+				}
+			}
+
+			for (ITeleportable* Teleportable : TeleportingActors)
+			{
+				TeleportActor(Teleportable);
 			}
 		}
 
-		for (ITeleportable* Teleportable : TeleportingActors)
+		for (const auto& Entry : TeleportableCopies)
 		{
-			TeleportActor(Teleportable);
+			ATeleportableCopy* Copy = Entry.Value;
+			FTransform NewTransform = CalculateTransformForCopy(Copy->GetParent());
+			Copy->SetActorTransform(NewTransform);
 		}
 	}
+	
 
 #if ENABLE_DRAW_DEBUG
 	if (CVarDebugDrawPortals.GetValueOnGameThread())
@@ -119,6 +131,11 @@ void APortal::Initialize(const TObjectPtr<APortalSurface> Surface, FVector InLoc
 	{
 		SceneCaptureComponent->HideComponent(SurfaceCollisionComp);
 	}
+}
+
+EPortalType APortal::GetPortalType() const
+{
+	return PortalType;
 }
 
 TObjectPtr<APortalSurface> APortal::GetPortalSurface() const
@@ -176,6 +193,14 @@ void APortal::SetConnectedPortal(TObjectPtr<APortal> Portal)
 	}
 
 	OtherPortal = Portal;
+
+	for (const auto& Entry : TeleportableCopies)
+	{
+		ATeleportableCopy* Copy = Entry.Value;
+		FTransform NewTransform = CalculateTransformForCopy(Copy->GetParent());
+		Copy->SetActorTransform(NewTransform);
+		Copy->UpdateCullingParams(Portal->GetActorLocation(), Portal->GetActorForwardVector());
+	}
 }
 
 void APortal::PrepareForActorTeleport(TObjectPtr<ITeleportable> TeleportingActor)
@@ -268,6 +293,7 @@ void APortal::OnActorBeginOverlap(TObjectPtr<AActor> Actor)
 		if (OtherPortal)
 		{
 			TeleportableActor->OnOverlapWithPortalBegin(this);
+			CreateTeleportableCopy(TeleportableActor);
 		}
 		ActorsInPortalRange.Add(TeleportableActor->GetTeleportableScriptInterface());
 	}
@@ -284,6 +310,7 @@ void APortal::OnActorEndOverlap(TObjectPtr<AActor> Actor)
 	if (OtherPortal)
 	{
 		TeleportableActor->OnOverlapWithPortalEnd(this);
+		DeleteTeleportableCopy(Actor->GetUniqueID());
 	}
 	ActorsInPortalRange.Remove(TeleportableActor->GetTeleportableScriptInterface());
 }
@@ -307,4 +334,32 @@ bool APortal::ShouldTeleportActor(TObjectPtr<ITeleportable> TeleportingActor, co
 bool APortal::ShouldTeleportActor(TObjectPtr<ITeleportable> TeleportingActor) const
 {
 	return ShouldTeleportActor(TeleportingActor, GetActorRotation().Vector());
+}
+
+void APortal::CreateTeleportableCopy(TObjectPtr<ITeleportable> TeleportingActor)
+{
+	AActor* ParentActor = TeleportingActor->CastToTeleportableActor();
+	const FTransform CopyTransform = CalculateTransformForCopy(ParentActor);
+	ATeleportableCopy* Copy = TeleportingActor->CreatePortalCopy(CopyTransform, this, ParentActor);
+	if (Copy)
+	{
+		TeleportableCopies.Add(ParentActor->GetUniqueID(), Copy);
+		Copy->UpdateCullingParams(OtherPortal->GetActorLocation(), OtherPortal->GetActorForwardVector());
+	}
+}
+
+void APortal::DeleteTeleportableCopy(int32 ParentObjectId)
+{
+	TObjectPtr<ATeleportableCopy>* CopyPtr = TeleportableCopies.Find(ParentObjectId);
+	if (CopyPtr)
+	{
+		CopyPtr->Get()->Destroy();
+		TeleportableCopies.Remove(ParentObjectId);
+	}
+}
+
+FTransform APortal::CalculateTransformForCopy(TObjectPtr<const AActor> ParentActor) const
+{
+	const FTransform RelativeTransform = ParentActor->GetTransform().GetRelativeTransform(GetActorTransform());
+	return RelativeTransform * OtherPortal->BackfacingComponent->GetComponentTransform();
 }

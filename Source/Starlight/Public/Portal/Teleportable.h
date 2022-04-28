@@ -8,6 +8,7 @@
 
 class APortalSurface;
 class APortal;
+class ATeleportableCopy;
 
 UINTERFACE()
 class UTeleportable : public UInterface
@@ -49,6 +50,9 @@ public:
 
 	TScriptInterface<ITeleportable> GetTeleportableScriptInterface();
 
+	/** Creates copy of this object that will mirror the original object on the other side of the portal */
+	virtual TObjectPtr<ATeleportableCopy> CreatePortalCopy(const FTransform& SpawnTransform, TObjectPtr<APortal> Portal, TObjectPtr<AActor> ParentActor);
+	
 protected:
 
 	virtual TObjectPtr<UPrimitiveComponent> GetCollisionComponent() const;

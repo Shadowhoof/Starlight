@@ -26,6 +26,8 @@ public:
 	virtual void OnOverlapWithPortalEnd(TObjectPtr<APortal> Portal) override;
 
 	virtual void Tick(float DeltaSeconds) override;
+
+	virtual TObjectPtr<ATeleportableCopy> CreatePortalCopy(const FTransform& SpawnTransform, TObjectPtr<APortal> Portal, TObjectPtr<AActor> ParentActor) override;
 	
 protected:
 

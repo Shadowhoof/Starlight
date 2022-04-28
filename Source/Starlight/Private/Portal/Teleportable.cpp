@@ -76,12 +76,18 @@ void ITeleportable::OnOverlapWithPortalBegin(TObjectPtr<APortal> Portal)
 {
 	UE_LOG(LogPortal, Verbose, TEXT("Portal %s is now overlapping with %s"), *Portal->GetName(), *CastToTeleportableActor()->GetName());
 	DisableCollisionWith(Portal->GetPortalSurface());
+
+	const ECollisionChannel ObjectTypeToBlock = GetOpposingCopyObjectType(Portal->GetPortalType());
+	GetCollisionComponent()->SetCollisionResponseToChannel(ObjectTypeToBlock, ECR_Block);
 }
 
 void ITeleportable::OnOverlapWithPortalEnd(TObjectPtr<APortal> Portal)
 {
 	UE_LOG(LogPortal, Verbose, TEXT("Portal %s is no longer overlapping with %s"), *Portal->GetName(), *CastToTeleportableActor()->GetName());
 	EnableCollisionWith(Portal->GetPortalSurface());
+
+	const ECollisionChannel ObjectTypeToIgnore = GetOpposingCopyObjectType(Portal->GetPortalType());
+	GetCollisionComponent()->SetCollisionResponseToChannel(ObjectTypeToIgnore, ECR_Ignore);
 }
 
 TScriptInterface<ITeleportable> ITeleportable::GetTeleportableScriptInterface()
@@ -109,4 +115,11 @@ FVector ITeleportable::GetVelocity() const
 
 void ITeleportable::SetVelocity(const FVector& Velocity)
 {
+}
+
+TObjectPtr<ATeleportableCopy> ITeleportable::CreatePortalCopy(const FTransform& SpawnTransform,
+                                                              TObjectPtr<APortal> Portal, TObjectPtr<AActor> ParentActor)
+{
+	UE_LOG(LogPortal, Error, TEXT("CreateCopy() is not implemented for %s"), *CastToTeleportableActor()->GetClass()->GetName());
+	return nullptr;
 }
