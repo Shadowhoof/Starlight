@@ -51,14 +51,10 @@ public:
 	TScriptInterface<ITeleportable> GetTeleportableScriptInterface();
 
 	/** Creates copy of this object that will mirror the original object on the other side of the portal */
-	virtual TObjectPtr<ATeleportableCopy> CreatePortalCopy(const FTransform& SpawnTransform, TObjectPtr<APortal> Portal, TObjectPtr<AActor> ParentActor);
-	
-protected:
+	virtual TObjectPtr<ATeleportableCopy> CreatePortalCopy(const FTransform& SpawnTransform, TObjectPtr<APortal> OwnerPortal, TObjectPtr<APortal> OtherPortal, TObjectPtr<ITeleportable> ParentActor);
 
 	virtual TObjectPtr<UPrimitiveComponent> GetCollisionComponent() const;
-
-	virtual FRotator GetRotation() const;
-
+	
 	virtual FVector GetVelocity() const;
 	virtual void SetVelocity(const FVector& Velocity);
 };

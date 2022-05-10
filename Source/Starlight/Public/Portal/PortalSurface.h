@@ -25,6 +25,11 @@ public:
 	 */
 	void GetCollisionComponents(TArray<TObjectPtr<UPrimitiveComponent>>& OutCollisionComponents);
 
+	/**
+	 * Returns actors that teleportable actor has to disable collision with in order to pass through the portal.
+	 */
+	void GetCollisionActors(TArray<TObjectPtr<AActor>>& OutCollisionActors);
+	
 	TObjectPtr<UPrimitiveComponent> GetAttachedSurfaceComponent() const;
 	
 protected:

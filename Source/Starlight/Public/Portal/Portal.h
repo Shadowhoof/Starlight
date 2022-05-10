@@ -57,9 +57,8 @@ public:
 
 	FTransform GetBackfacingRelativeTransform(TObjectPtr<ACharacter> PlayerCharacter) const;
 
+	TObjectPtr<APortal> GetConnectedPortal() const;
 	void SetConnectedPortal(TObjectPtr<APortal> Portal);
-
-	void PrepareForActorTeleport(TObjectPtr<ITeleportable> TeleportingActor);
 
 	void OnActorMoved(TObjectPtr<ITeleportable> Actor);
 
@@ -68,6 +67,8 @@ public:
 	FRotator TeleportRotation(const FRotator& Rotator);
 	FVector TeleportVelocity(const FVector& Velocity);
 
+	TObjectPtr<ATeleportableCopy> RetrieveCopyForActor(TObjectPtr<AActor> Actor) const;
+	
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Portal")
 	TObjectPtr<UStaticMeshComponent> PortalMesh;

@@ -6,6 +6,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/SceneCaptureComponent2D.h"
+#include "Core/StarlightActor.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "GameFramework/Character.h"
 #include "Portal/PortalConstants.h"
@@ -78,8 +79,10 @@ void APortal::Tick(float DeltaSeconds)
 		for (const auto& Entry : TeleportableCopies)
 		{
 			ATeleportableCopy* Copy = Entry.Value;
+			// FIXME - this should probably be in a different place, copy movement is all over the place (teleport here, physics in mesh component)
 			FTransform NewTransform = CalculateTransformForCopy(Copy->GetParent());
 			Copy->SetActorTransform(NewTransform);
+			Copy->ResetVelocity();
 		}
 	}
 	
@@ -153,6 +156,11 @@ FVector APortal::GetExtents() const
 	return Extents;
 }
 
+TObjectPtr<APortal> APortal::GetConnectedPortal() const
+{
+	return OtherPortal;
+}
+
 void APortal::SetRenderTargets(TObjectPtr<UTextureRenderTarget2D> ReadTarget,
                                TObjectPtr<UTextureRenderTarget2D> WriteTarget)
 {
@@ -203,14 +211,6 @@ void APortal::SetConnectedPortal(TObjectPtr<APortal> Portal)
 	}
 }
 
-void APortal::PrepareForActorTeleport(TObjectPtr<ITeleportable> TeleportingActor)
-{
-	if (OtherPortal->GetPortalSurface() != PortalSurface)
-	{
-		OnActorBeginOverlap(TeleportingActor->CastToTeleportableActor());
-	}
-}
-
 void APortal::OnActorMoved(TObjectPtr<ITeleportable> Actor)
 {
 	if (ShouldTeleportActor(Actor))
@@ -257,6 +257,17 @@ FVector APortal::TeleportVelocity(const FVector& Velocity)
 	return OtherPortal->GetActorQuat().RotateVector(RelativeVelocity);
 }
 
+TObjectPtr<ATeleportableCopy> APortal::RetrieveCopyForActor(TObjectPtr<AActor> Actor) const
+{
+	if (!Actor)
+	{
+		return nullptr;
+	}
+
+	const TObjectPtr<ATeleportableCopy>* CopyPtr = TeleportableCopies.Find(Actor->GetUniqueID());
+	return CopyPtr ? *CopyPtr : nullptr;
+}
+
 void APortal::BeginPlay()
 {
 	Super::BeginPlay();
@@ -282,13 +293,8 @@ void APortal::OnCollisionBoxEndOverlap(UPrimitiveComponent* OverlappedComponent,
 
 void APortal::OnActorBeginOverlap(TObjectPtr<AActor> Actor)
 {
-	ITeleportable* TeleportableActor = Cast<ITeleportable>(Actor);
-	if (!TeleportableActor)
-	{
-		return;
-	}
-
-	if (!ActorsInPortalRange.Contains(TeleportableActor))
+	if (ITeleportable* TeleportableActor = Cast<ITeleportable>(Actor);
+		TeleportableActor && !ActorsInPortalRange.Contains(TeleportableActor))
 	{
 		if (OtherPortal)
 		{
@@ -301,23 +307,19 @@ void APortal::OnActorBeginOverlap(TObjectPtr<AActor> Actor)
 
 void APortal::OnActorEndOverlap(TObjectPtr<AActor> Actor)
 {
-	ITeleportable* TeleportableActor = Cast<ITeleportable>(Actor);
-	if (!TeleportableActor)
+	if (ITeleportable* TeleportableActor = Cast<ITeleportable>(Actor))
 	{
-		return;
+		if (OtherPortal)
+		{
+			TeleportableActor->OnOverlapWithPortalEnd(this);
+			DeleteTeleportableCopy(Actor->GetUniqueID());
+		}
+		ActorsInPortalRange.Remove(TeleportableActor->GetTeleportableScriptInterface());
 	}
-
-	if (OtherPortal)
-	{
-		TeleportableActor->OnOverlapWithPortalEnd(this);
-		DeleteTeleportableCopy(Actor->GetUniqueID());
-	}
-	ActorsInPortalRange.Remove(TeleportableActor->GetTeleportableScriptInterface());
 }
 
 void APortal::TeleportActor(TObjectPtr<ITeleportable> TeleportingActor)
 {
-	OtherPortal->PrepareForActorTeleport(TeleportingActor);
 	TeleportingActor->Teleport(this, OtherPortal);
 	UE_LOG(LogPortal, Verbose, TEXT("Portal %s has teleported actor %s"), *GetName(),
 	       *TeleportingActor->CastToTeleportableActor()->GetName());
@@ -340,7 +342,7 @@ void APortal::CreateTeleportableCopy(TObjectPtr<ITeleportable> TeleportingActor)
 {
 	AActor* ParentActor = TeleportingActor->CastToTeleportableActor();
 	const FTransform CopyTransform = CalculateTransformForCopy(ParentActor);
-	ATeleportableCopy* Copy = TeleportingActor->CreatePortalCopy(CopyTransform, this, ParentActor);
+	ATeleportableCopy* Copy = TeleportingActor->CreatePortalCopy(CopyTransform, this, OtherPortal, TeleportingActor);
 	if (Copy)
 	{
 		TeleportableCopies.Add(ParentActor->GetUniqueID(), Copy);

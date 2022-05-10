@@ -3,6 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Teleportable.h"
+#include "CopyStaticMeshComponent.h"
 #include "GameFramework/Actor.h"
 #include "TeleportableCopy.generated.h"
 
@@ -25,9 +27,10 @@ public:
 	 * Initializes created teleportable actor copy
 	 * @param InParent Actor that served as a base for this copy
 	 * @param StaticMesh Parent actor's mesh
-	 * @param PortalType Type of portal that created and owns this copy
+	 * @param OwnerPortal Portal that created and owns this copy
 	 */
-	void Initialize(TObjectPtr<AActor> InParent, TObjectPtr<UStaticMesh> StaticMesh, EPortalType PortalType);
+	void Initialize(TObjectPtr<ITeleportable> InParent, TObjectPtr<UStaticMesh> StaticMesh, TObjectPtr<APortal> OwnerPortal, TObjectPtr<
+	                APortal> OtherPortal);
 
 	/**
 	 * Sets up culling parameters for dynamic material
@@ -35,14 +38,21 @@ public:
 	void UpdateCullingParams(const FVector& CullPlaneCenter, const FVector& CullPlaneNormal);
 	
 	TObjectPtr<AActor> GetParent() const;
-	
+
+	void ResetVelocity();
+
+	virtual void DispatchPhysicsCollisionHit(const FRigidBodyCollisionInfo& MyInfo, const FRigidBodyCollisionInfo& OtherInfo, const FCollisionImpactData& RigidCollisionData) override;
+
 protected:
 
 	UPROPERTY()
-	TObjectPtr<UStaticMeshComponent> StaticMeshComponent;
+	TObjectPtr<UCopyStaticMeshComponent> StaticMeshComponent;
 
 	UPROPERTY()
-	TObjectPtr<AActor> Parent;
+	TScriptInterface<ITeleportable> ParentTeleportable;
+
+	UPROPERTY()
+	TObjectPtr<AActor> ParentActor;
 
 	UPROPERTY()
 	TObjectPtr<UMaterialInstanceDynamic> DynamicMaterialInstance;

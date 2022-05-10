@@ -82,6 +82,15 @@ void APortalSurface::GetCollisionComponents(TArray<TObjectPtr<UPrimitiveComponen
 	}
 }
 
+void APortalSurface::GetCollisionActors(TArray<TObjectPtr<AActor>>& OutCollisionActors)
+{
+	OutCollisionActors.Add(this);
+	if (AttachedSurface)
+	{
+		OutCollisionActors.Add(AttachedSurface);
+	}
+}
+
 TObjectPtr<UPrimitiveComponent> APortalSurface::GetAttachedSurfaceComponent() const
 {
 	return AttachedSurfaceCollisionComponent;

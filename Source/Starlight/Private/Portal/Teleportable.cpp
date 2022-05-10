@@ -6,16 +6,34 @@
 #include "Portal/Portal.h"
 #include "Portal/PortalConstants.h"
 #include "Portal/PortalSurface.h"
+#include "Portal/TeleportableCopy.h"
 #include "Statics/StarlightStatics.h"
 
 
 void ITeleportable::Teleport(TObjectPtr<APortal> SourcePortal, TObjectPtr<APortal> TargetPortal)
 {
 	AActor* AsActor = CastToTeleportableActor();
-	const FVector NewLocation = SourcePortal->TeleportLocation(AsActor->GetActorLocation());
+	FVector NewLocation = SourcePortal->TeleportLocation(AsActor->GetActorLocation());
 	const FRotator NewRotation = SourcePortal->TeleportRotation(AsActor->GetActorQuat());
 	const FVector NewVelocity = SourcePortal->TeleportVelocity(GetVelocity());
 
+	FVector Adjustment;
+	TArray<TObjectPtr<AActor>> IgnoredActors;
+	TargetPortal->GetPortalSurface()->GetCollisionActors(IgnoredActors);
+	ATeleportableCopy* Copy = SourcePortal->RetrieveCopyForActor(AsActor);
+	if (Copy)
+	{
+		IgnoredActors.Add(Copy);
+	}
+	
+	const bool bIsEncroaching = UStarlightStatics::ComponentEncroachesBlockingGeometry(AsActor, GetCollisionComponent(), NewLocation, NewRotation, IgnoredActors, Adjustment);
+	if (bIsEncroaching)
+	{
+		UE_LOG(LogPortal, Verbose, TEXT("%s is encroaching into other objects during teleport, making adjustment to push it out: %s"),
+			*AsActor->GetName(), *Adjustment.ToCompactString());
+	}
+	
+	NewLocation += Adjustment;
 	const bool bHasTeleported = AsActor->TeleportTo(NewLocation, NewRotation, false, true);
 	if (!bHasTeleported)
 	{
@@ -103,11 +121,6 @@ TObjectPtr<UPrimitiveComponent> ITeleportable::GetCollisionComponent() const
 	return nullptr;
 }
 
-FRotator ITeleportable::GetRotation() const
-{
-	return CastToTeleportableActor()->GetActorRotation();
-}
-
 FVector ITeleportable::GetVelocity() const
 {
 	return FVector::ZeroVector;
@@ -118,7 +131,7 @@ void ITeleportable::SetVelocity(const FVector& Velocity)
 }
 
 TObjectPtr<ATeleportableCopy> ITeleportable::CreatePortalCopy(const FTransform& SpawnTransform,
-                                                              TObjectPtr<APortal> Portal, TObjectPtr<AActor> ParentActor)
+                                                              TObjectPtr<APortal> OwnerPortal, TObjectPtr<APortal> OtherPortal, TObjectPtr<ITeleportable> ParentActor)
 {
 	UE_LOG(LogPortal, Error, TEXT("CreateCopy() is not implemented for %s"), *CastToTeleportableActor()->GetClass()->GetName());
 	return nullptr;

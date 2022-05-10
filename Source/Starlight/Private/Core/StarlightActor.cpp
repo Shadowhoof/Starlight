@@ -10,15 +10,16 @@ AStarlightActor::AStarlightActor()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	
-	StaticMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMeshComponent"));
-	StaticMeshComponent->SetSimulatePhysics(true);
-	StaticMeshComponent->SetCollisionObjectType(ECC_PhysicsBody);
-	RootComponent = StaticMeshComponent;
+	MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMeshComponent"));
+	MeshComponent->SetSimulatePhysics(true);
+	MeshComponent->SetNotifyRigidBodyCollision(true);
+	MeshComponent->SetCollisionObjectType(ECC_PhysicsBody);
+	RootComponent = MeshComponent;
 }
 
 TObjectPtr<UPrimitiveComponent> AStarlightActor::GetAttachComponent() const
 {
-	return StaticMeshComponent;
+	return MeshComponent;
 }
 
 void AStarlightActor::OnOverlapWithPortalBegin(TObjectPtr<APortal> Portal)
@@ -48,12 +49,15 @@ void AStarlightActor::Tick(float DeltaSeconds)
 }
 
 TObjectPtr<ATeleportableCopy> AStarlightActor::CreatePortalCopy(const FTransform& SpawnTransform,
-                                                                TObjectPtr<APortal> Portal, TObjectPtr<AActor> ParentActor)
+                                                                TObjectPtr<APortal> OwnerPortal,
+                                                                TObjectPtr<APortal> OtherPortal,
+                                                                TObjectPtr<ITeleportable> ParentActor)
 {
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	ATeleportableCopy* Copy = GetWorld()->SpawnActor<ATeleportableCopy>(ATeleportableCopy::StaticClass(), SpawnTransform, SpawnParams);
-	Copy->Initialize(ParentActor, StaticMeshComponent->GetStaticMesh(), Portal->GetPortalType());
+	ATeleportableCopy* Copy = GetWorld()->SpawnActor<ATeleportableCopy>(ATeleportableCopy::StaticClass(),
+	                                                                    SpawnTransform, SpawnParams);
+	Copy->Initialize(ParentActor, MeshComponent->GetStaticMesh(), OwnerPortal, OtherPortal);
 	return Copy;
 }
 
@@ -61,22 +65,22 @@ void AStarlightActor::BeginPlay()
 {
 	Super::BeginPlay();
 
-	DynamicMaterialInstance = StaticMeshComponent->CreateDynamicMaterialInstance(0);
+	DynamicMaterialInstance = MeshComponent->CreateDynamicMaterialInstance(0);
 }
 
 TObjectPtr<UPrimitiveComponent> AStarlightActor::GetCollisionComponent() const
 {
-	return StaticMeshComponent;
+	return MeshComponent;
 }
 
 FVector AStarlightActor::GetVelocity() const
 {
-	return StaticMeshComponent->GetPhysicsLinearVelocity();
+	return MeshComponent->GetPhysicsLinearVelocity();
 }
 
 void AStarlightActor::SetVelocity(const FVector& Velocity)
 {
-	StaticMeshComponent->SetPhysicsLinearVelocity(Velocity);
+	MeshComponent->SetPhysicsLinearVelocity(Velocity);
 }
 
 void AStarlightActor::UpdateMaterialParameters()

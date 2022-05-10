@@ -62,6 +62,11 @@ public:
 	virtual void OnOverlapWithPortalBegin(TObjectPtr<APortal> Portal) override;
 	virtual void OnOverlapWithPortalEnd(TObjectPtr<APortal> Portal) override;
 
+	virtual TObjectPtr<UPrimitiveComponent> GetCollisionComponent() const override;
+
+	virtual FVector GetVelocity() const override;
+	virtual void SetVelocity(const FVector& Velocity) override;
+	
 	/** teleportable public interface end */
 
 protected:
@@ -91,17 +96,6 @@ protected:
 
 	UPROPERTY(Transient)
 	TObjectPtr<APlayerController> PlayerController;
-
-protected:
-
-	// protected teleportable interface
-	
-	virtual TObjectPtr<UPrimitiveComponent> GetCollisionComponent() const override;
-
-	virtual FVector GetVelocity() const override;
-	virtual void SetVelocity(const FVector& Velocity) override;
-
-	// end protected teleportable interface
 	
 private:
 	UPROPERTY(Transient)

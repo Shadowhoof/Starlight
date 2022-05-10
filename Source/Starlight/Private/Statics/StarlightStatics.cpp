@@ -14,7 +14,7 @@ bool UStarlightStatics::IsHMDActive()
 }
 
 void UStarlightStatics::EnableCollisionBetween(TObjectPtr<UPrimitiveComponent> First,
-	TObjectPtr<UPrimitiveComponent> Second)
+                                               TObjectPtr<UPrimitiveComponent> Second)
 {
 	if (First->IsSimulatingPhysics() || Second->IsSimulatingPhysics())
 	{
@@ -32,7 +32,7 @@ void UStarlightStatics::EnableCollisionBetween(TObjectPtr<UPrimitiveComponent> F
 }
 
 void UStarlightStatics::DisableCollisionBetween(TObjectPtr<UPrimitiveComponent> First,
-	TObjectPtr<UPrimitiveComponent> Second)
+                                                TObjectPtr<UPrimitiveComponent> Second)
 {
 	if (First->IsSimulatingPhysics() || Second->IsSimulatingPhysics())
 	{
@@ -40,7 +40,7 @@ void UStarlightStatics::DisableCollisionBetween(TObjectPtr<UPrimitiveComponent> 
 		FirstParticle->AddCollisionConstraintFlag(Chaos::ECollisionConstraintFlags::CCF_BroadPhaseIgnoreCollisions);
 		Chaos::FPBDRigidParticle* SecondParticle = Second->BodyInstance.ActorHandle->GetRigidParticleUnsafe();
 		SecondParticle->AddCollisionConstraintFlag(Chaos::ECollisionConstraintFlags::CCF_BroadPhaseIgnoreCollisions);
-		
+
 		Chaos::FIgnoreCollisionManager& CollisionManager = GetIgnoreCollisionManager(First);
 		const Chaos::FUniqueIdx FirstHandle = GetPhysicsHandleID(First);
 		const Chaos::FUniqueIdx SecondHandle = GetPhysicsHandleID(Second);
@@ -55,13 +55,13 @@ void UStarlightStatics::DisableCollisionBetween(TObjectPtr<UPrimitiveComponent> 
 }
 
 bool UStarlightStatics::IsPhysicsCollisionIgnored(TObjectPtr<UPrimitiveComponent> First,
-	TObjectPtr<UPrimitiveComponent> Second)
+                                                  TObjectPtr<UPrimitiveComponent> Second)
 {
 	if (!First->IsSimulatingPhysics() && !Second->IsSimulatingPhysics())
 	{
 		return true;
 	}
-	
+
 	Chaos::FIgnoreCollisionManager& CollisionManager = GetIgnoreCollisionManager(First);
 	return CollisionManager.IgnoresCollision(GetPhysicsHandleID(First), GetPhysicsHandleID(Second));
 }
@@ -76,4 +76,60 @@ Chaos::FIgnoreCollisionManager& UStarlightStatics::GetIgnoreCollisionManager(TOb
 Chaos::FUniqueIdx UStarlightStatics::GetPhysicsHandleID(TObjectPtr<UPrimitiveComponent> Component)
 {
 	return Component->BodyInstance.ActorHandle->GetGameThreadAPI().UniqueIdx();
+}
+
+bool UStarlightStatics::ComponentEncroachesBlockingGeometry(TObjectPtr<AActor> Actor,
+                                                            TObjectPtr<UPrimitiveComponent> Component,
+                                                            const FVector& Location, const FRotator& Rotation,
+                                                            const TArray<TObjectPtr<AActor>>& IgnoredActors,
+                                                            FVector& OutAdjustment)
+{
+	const FQuat QuatRotation = FQuat(Rotation);
+	const ECollisionChannel ObjectType = Component->GetCollisionObjectType();
+	OutAdjustment = FVector::ZeroVector;
+	
+	TArray<FOverlapResult> Overlaps;
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(ComponentEncroachesBlockingGeometry), false, Actor);
+	FCollisionResponseParams ResponseParams;
+	Component->InitSweepCollisionParams(Params, ResponseParams);
+	Params.AddIgnoredActors(IgnoredActors);
+	bool bFoundBlockingHit = Actor->GetWorld()->OverlapMultiByChannel(Overlaps, Location, QuatRotation,
+	                                                                  ObjectType, Component->GetCollisionShape(),
+	                                                                  Params, ResponseParams);
+
+	// if encroaching, add up all the MTDs of overlapping shapes
+	FMTDResult MTDResult;
+	uint32 NumBlockingHits = 0;
+	OutAdjustment = FVector::ZeroVector;
+	for (int32 HitIdx = 0; HitIdx < Overlaps.Num(); HitIdx++)
+	{
+		UPrimitiveComponent* const OverlapComponent = Overlaps[HitIdx].Component.Get();
+		// first determine closest impact point along each axis
+		if (OverlapComponent && OverlapComponent->GetCollisionResponseToChannel(ObjectType) == ECR_Block)
+		{
+			NumBlockingHits++;
+			FCollisionShape const NonShrunkenCollisionShape = Component->GetCollisionShape();
+			const FBodyInstance* OverlapBodyInstance = OverlapComponent->GetBodyInstance(NAME_None, true, Overlaps[HitIdx].ItemIndex);
+			bool bSuccess = OverlapBodyInstance && OverlapBodyInstance->OverlapTest(Location, QuatRotation, NonShrunkenCollisionShape, &MTDResult);
+			if (bSuccess)
+			{
+				OutAdjustment += MTDResult.Direction * MTDResult.Distance;
+			}
+			else
+			{
+				// It's not safe to use a partial result, that could push us out to an invalid location (like the other side of a wall).
+				OutAdjustment = FVector::ZeroVector;
+				return true;
+			}
+		}
+	}
+
+	// See if we chose to invalidate all of our supposed "blocking hits".
+	if (NumBlockingHits == 0)
+	{
+		OutAdjustment = FVector::ZeroVector;
+		bFoundBlockingHit = false;
+	}
+
+	return bFoundBlockingHit;
 }

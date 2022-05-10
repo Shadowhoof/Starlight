@@ -27,12 +27,17 @@ public:
 
 	virtual void Tick(float DeltaSeconds) override;
 
-	virtual TObjectPtr<ATeleportableCopy> CreatePortalCopy(const FTransform& SpawnTransform, TObjectPtr<APortal> Portal, TObjectPtr<AActor> ParentActor) override;
+	virtual TObjectPtr<ATeleportableCopy> CreatePortalCopy(const FTransform& SpawnTransform, TObjectPtr<APortal> OwnerPortal, TObjectPtr<APortal> OtherPortal, TObjectPtr<ITeleportable> ParentActor) override;
+
+	virtual TObjectPtr<UPrimitiveComponent> GetCollisionComponent() const override;
+
+	virtual FVector GetVelocity() const override;
+	virtual void SetVelocity(const FVector& Velocity) override;
 	
 protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "StaticMesh")
-	TObjectPtr<UStaticMeshComponent> StaticMeshComponent;
+	TObjectPtr<UStaticMeshComponent> MeshComponent;
 
 	UPROPERTY()
 	TObjectPtr<UMaterialInstanceDynamic> DynamicMaterialInstance;
@@ -41,11 +46,6 @@ protected:
 
 	virtual void BeginPlay() override;
 	
-	virtual TObjectPtr<UPrimitiveComponent> GetCollisionComponent() const override;
-
-	virtual FVector GetVelocity() const override;
-	virtual void SetVelocity(const FVector& Velocity) override;
-
 private:
 
 	UPROPERTY()

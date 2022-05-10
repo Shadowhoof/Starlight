@@ -56,5 +56,5 @@ inline ECollisionChannel GetCopyObjectType(EPortalType PortalType)
  */
 inline ECollisionChannel GetOpposingCopyObjectType(EPortalType PortalType)
 {
-	return PortalType == EPortalType::First ? ECC_FirstPortalCopy : ECC_SecondPortalCopy;
+	return PortalType == EPortalType::First ? ECC_SecondPortalCopy : ECC_FirstPortalCopy;
 }
