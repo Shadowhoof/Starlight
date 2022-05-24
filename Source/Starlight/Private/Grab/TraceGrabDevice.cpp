@@ -13,10 +13,11 @@
 
 namespace TraceGrabConstants
 {
-	const float GrabRange = 500.f;
-
-	const FVector HeldObjectOffset = {150.f, 0.f, 0.f};
+	const float GrabRange = 250.f;
 	
+	const FVector HeldObjectOffset = {150.f, 0.f, 0.f};
+	const float MaxHoldDistance = 250.f;
+	const float MinHoldDotProduct = FMath::Cos(FMath::DegreesToRadians(60.f));
 }
 
 
@@ -71,7 +72,7 @@ void UTraceGrabDevice::Tick(const float DeltaSeconds)
 	}
 
 	// check line of sight to owner component
-	if (!IsGrabbedObjectInSight())
+	if (!ShouldKeepHoldingObject())
 	{
 		Release();
 		return;
@@ -168,7 +169,7 @@ void UTraceGrabDevice::OnOwnerCharacterTeleported(TObjectPtr<APortal> SourcePort
 	}
 }
 
-bool UTraceGrabDevice::IsGrabbedObjectInSight() const
+bool UTraceGrabDevice::ShouldKeepHoldingObject() const
 {
 	if (!GrabbedObject)
 	{
@@ -191,12 +192,23 @@ bool UTraceGrabDevice::IsGrabbedObjectInSight() const
 
 	Algo::Reverse(TransformedPoints);
 	FVector StartPoint = OwnerLocation;
+
+	// Check whether we're facing the grabbed object. First point is enough to determine that because angle between
+	// direction to object and direction the owner is facing will stay the same after transformation via portals.
+	const FVector ToFirstPointDir = (TransformedPoints[0] - StartPoint).GetSafeNormal();
+	if (ToFirstPointDir.Dot(OwnerComponent->GetComponentRotation().Vector()) < TraceGrabConstants::MinHoldDotProduct)
+	{
+		UE_LOG(LogGrab, VeryVerbose, TEXT("Not facing grabbed object, dot: %.2f, dropping"), ToFirstPointDir.Dot(OwnerComponent->GetComponentRotation().Vector()));
+		return false;
+	}
+	
+	float DistanceToObject = 0.f;
 	for (const FVector& Point : TransformedPoints)
 	{
 		FHitResult HitResult;
-		const bool bBlockingHit = GetWorld()->LineTraceSingleByChannel(HitResult, StartPoint, Point, ECC_GrabObstruction);
-		if (bBlockingHit)
+		if (GetWorld()->LineTraceSingleByChannel(HitResult, StartPoint, Point, ECC_GrabObstruction))
 		{
+			DistanceToObject += FVector::Distance(StartPoint, HitResult.Location);
 			if (HitResult.GetComponent()->GetCollisionObjectType() != ECC_PortalBody)
 			{
 				return false;
@@ -207,9 +219,16 @@ bool UTraceGrabDevice::IsGrabbedObjectInSight() const
 		}
 		else
 		{
-			return true;
+			DistanceToObject += FVector::Distance(StartPoint, Point);
+			break;
 		}
 	}
 
+	if (DistanceToObject > TraceGrabConstants::MaxHoldDistance)
+	{
+		UE_LOG(LogGrab, VeryVerbose, TEXT("Grabbed object is too far away, distance: %.2f, dropping"), DistanceToObject);
+		return false;
+	}
+	
 	return true;
 }

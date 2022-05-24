@@ -50,6 +50,6 @@ private:
 	void OnGrabbedObjectTeleported(TObjectPtr<APortal> SourcePortal, TObjectPtr<APortal> TargetPortal);
 	void OnOwnerCharacterTeleported(TObjectPtr<APortal> SourcePortal, TObjectPtr<APortal> TargetPortal);
 
-	bool IsGrabbedObjectInSight() const;
+	bool ShouldKeepHoldingObject() const;
 
 };

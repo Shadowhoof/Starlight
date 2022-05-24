@@ -23,17 +23,17 @@ ATeleportableCopy::ATeleportableCopy()
 void ATeleportableCopy::Initialize(TObjectPtr<ITeleportable> InParent, TObjectPtr<UStaticMesh> StaticMesh,
                                    TObjectPtr<APortal> OwnerPortal, TObjectPtr<APortal> OtherPortal)
 {
+	UPrimitiveComponent* ParentCollisionComponent = InParent->GetCollisionComponent();
+	
 	StaticMeshComponent->SetStaticMesh(StaticMesh);
 	StaticMeshComponent->SetCollisionObjectType(UPortalStatics::GetCopyObjectType(OwnerPortal->GetPortalType()));
-	StaticMeshComponent->SetMassOverrideInKg(NAME_None, InParent->GetCollisionComponent()->GetMass());
+	StaticMeshComponent->SetMassOverrideInKg(NAME_None, ParentCollisionComponent->GetBodyInstance()->GetBodyMass());
 
-	ParentTeleportable = InParent->GetTeleportableScriptInterface();
 	ParentActor = InParent->CastToTeleportableActor();
 
 	DynamicMaterialInstance = StaticMeshComponent->CreateDynamicMaterialInstance(0);
 	DynamicMaterialInstance->SetScalarParameterValue(PortalConstants::CanBeCulledParam, PortalConstants::FloatTrue);
 
-	UStaticMeshComponent* ParentMesh = Cast<UStaticMeshComponent>(ParentTeleportable->GetCollisionComponent());
 	TArray<TObjectPtr<UPrimitiveComponent>> SurfaceCollisionComponents;
 	OwnerPortal->GetConnectedPortal()->GetPortalSurface()->GetCollisionComponents(SurfaceCollisionComponents);
 	for (UPrimitiveComponent* CollisionComponent : SurfaceCollisionComponents)
@@ -41,7 +41,7 @@ void ATeleportableCopy::Initialize(TObjectPtr<ITeleportable> InParent, TObjectPt
 		UStarlightStatics::DisableCollisionBetween(StaticMeshComponent, CollisionComponent);
 	}
 
-	StaticMeshComponent->SetLinkedComponent(ParentMesh);
+	StaticMeshComponent->SetLinkedComponent(ParentCollisionComponent);
 }
 
 void ATeleportableCopy::UpdateCullingParams(const FVector& CullPlaneCenter, const FVector& CullPlaneNormal)

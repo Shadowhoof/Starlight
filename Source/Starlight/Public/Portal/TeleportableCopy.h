@@ -50,9 +50,6 @@ protected:
 	TObjectPtr<UCopyStaticMeshComponent> StaticMeshComponent;
 
 	UPROPERTY()
-	TScriptInterface<ITeleportable> ParentTeleportable;
-
-	UPROPERTY()
 	TObjectPtr<AActor> ParentActor;
 
 	UPROPERTY()
