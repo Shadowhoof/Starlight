@@ -7,6 +7,8 @@
 #include "TraceGrabDevice.generated.h"
 
 class AStarlightCharacter;
+class APortal;
+class ITeleportable;
 
 /**
  *  Grab device which uses ray cast to figure out what to grab
@@ -20,13 +22,34 @@ public:
 
 	virtual bool TryGrabbing() override;
 
-	void Initialize(TObjectPtr<AStarlightCharacter> Character);
+	virtual void Initialize(TObjectPtr<USceneComponent> InOwnerComponent) override;
+
+	virtual void Tick(const float DeltaSeconds) override;
 	
+protected:
+
+	virtual TObjectPtr<USceneComponent> GetComponentToAttachTo() const override;
+
+	virtual void OnSuccessfulRelease() override;
+
 private:
 
 	UPROPERTY(Transient)
-	TObjectPtr<AStarlightCharacter> PlayerCharacter = nullptr;
+	TObjectPtr<AStarlightCharacter> PlayerCharacter;
 
-	virtual TObjectPtr<USceneComponent> GetComponentToAttachTo() const override;
+	/** Portals between trace device and grabbed object */
+	UPROPERTY()
+	TArray<TWeakObjectPtr<APortal>> HeldThroughPortals;
 	
+private:
+
+	FVector GetDesiredGrabbedObjectLocation() const;
+
+	void OnActorTeleported(TObjectPtr<ITeleportable> Actor, TObjectPtr<APortal> SourcePortal, TObjectPtr<APortal> TargetPortal);
+	
+	void OnGrabbedObjectTeleported(TObjectPtr<APortal> SourcePortal, TObjectPtr<APortal> TargetPortal);
+	void OnOwnerCharacterTeleported(TObjectPtr<APortal> SourcePortal, TObjectPtr<APortal> TargetPortal);
+
+	bool IsGrabbedObjectInSight() const;
+
 };

@@ -19,7 +19,7 @@ class STARLIGHT_API UMotionControllerGrabDevice : public UGrabDevice
 
 public:
 
-	void Initialize(TObjectPtr<UMotionControllerComponent> Controller);
+	virtual void Initialize(TObjectPtr<USceneComponent> InOwnerComponent) override;
 
 	virtual bool TryGrabbing() override;
 
@@ -28,9 +28,6 @@ protected:
 	virtual TObjectPtr<USceneComponent> GetComponentToAttachTo() const override;
 	
 private:
-
-	UPROPERTY(Transient)
-	TObjectPtr<UMotionControllerComponent> MotionController;
 
 	FCollisionShape GrabTraceShape;
 	

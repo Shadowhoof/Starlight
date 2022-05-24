@@ -12,7 +12,7 @@ AGrabbableActor::AGrabbableActor()
 	RootComponent = StaticMeshComponent;
 }
 
-TObjectPtr<UPrimitiveComponent> AGrabbableActor::GetAttachComponent() const
+TObjectPtr<UPrimitiveComponent> AGrabbableActor::GetComponentToGrab() const
 {
 	return StaticMeshComponent;
 }

@@ -17,25 +17,45 @@ class STARLIGHT_API AStarlightActor : public AActor, public ITeleportable, publi
 	GENERATED_BODY()
 
 public:
-	
 	AStarlightActor();
 
-	virtual TObjectPtr<UPrimitiveComponent> GetAttachComponent() const override;
+	// Grabbable interface begin
+	
+	virtual TObjectPtr<UPrimitiveComponent> GetComponentToGrab() const override;
+
+	virtual void OnGrab() override;
+	virtual void OnRelease() override;
+	
+	virtual bool IsGrabbed() const override;
+
+	virtual void OnGrabbableMoved(const float Speed) override;
+
+	// Grabbable interface end 
+
+	// Teleportable interface begin
 
 	virtual void OnOverlapWithPortalBegin(TObjectPtr<APortal> Portal) override;
 	virtual void OnOverlapWithPortalEnd(TObjectPtr<APortal> Portal) override;
 
 	virtual void Tick(float DeltaSeconds) override;
 
-	virtual TObjectPtr<ATeleportableCopy> CreatePortalCopy(const FTransform& SpawnTransform, TObjectPtr<APortal> OwnerPortal, TObjectPtr<APortal> OtherPortal, TObjectPtr<ITeleportable> ParentActor) override;
+	virtual TObjectPtr<ATeleportableCopy> CreatePortalCopy(const FTransform& SpawnTransform,
+	                                                       TObjectPtr<APortal> OwnerPortal,
+	                                                       TObjectPtr<APortal> OtherPortal,
+	                                                       TObjectPtr<ITeleportable> ParentActor) override;
 
 	virtual TObjectPtr<UPrimitiveComponent> GetCollisionComponent() const override;
 
 	virtual FVector GetVelocity() const override;
 	virtual void SetVelocity(const FVector& Velocity) override;
-	
-protected:
 
+	// Teleportable interface end
+	
+	virtual void NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UPrimitiveComponent* OtherComp, bool bSelfMoved,
+	                       FVector HitLocation, FVector HitNormal, FVector NormalImpulse,
+	                       const FHitResult& Hit) override;
+
+protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "StaticMesh")
 	TObjectPtr<UStaticMeshComponent> MeshComponent;
 
@@ -43,16 +63,16 @@ protected:
 	TObjectPtr<UMaterialInstanceDynamic> DynamicMaterialInstance;
 
 protected:
-
 	virtual void BeginPlay() override;
-	
-private:
 
+private:
 	UPROPERTY()
 	TArray<TObjectPtr<APortal>> OverlappingPortals;
-	
+
+	bool bIsGrabbed = false;
+
+	float GrabbedMovementSpeed = 0.f;
+
 private:
-
 	void UpdateMaterialParameters();
-
 };

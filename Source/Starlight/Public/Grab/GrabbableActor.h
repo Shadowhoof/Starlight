@@ -16,7 +16,7 @@ public:
 	
 	AGrabbableActor();
 
-	virtual TObjectPtr<UPrimitiveComponent> GetAttachComponent() const override;
+	virtual TObjectPtr<UPrimitiveComponent> GetComponentToGrab() const override;
 
 protected:
 

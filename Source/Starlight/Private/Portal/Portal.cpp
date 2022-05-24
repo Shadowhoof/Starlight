@@ -6,7 +6,8 @@
 #include "Camera/CameraComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/SceneCaptureComponent2D.h"
-#include "Core/StarlightActor.h"
+#include "Core/StarlightConstants.h"
+#include "Core/StarlightGameMode.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "GameFramework/Character.h"
 #include "Portal/PortalConstants.h"
@@ -26,10 +27,14 @@ APortal::APortal()
 	PrimaryActorTick.bCanEverTick = true;
 
 	PortalMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMeshComponent"));
-	PortalMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	PortalMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	PortalMesh->SetCollisionObjectType(ECC_PortalBody);
+	PortalMesh->SetCollisionResponseToChannel(ECC_PhysicsBody, ECR_Block);
+	PortalMesh->SetCollisionResponseToChannel(ECC_GrabObstruction, ECR_Block);
 	RootComponent = PortalMesh;
 
 	BorderMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BorderMesh"));
+	BorderMesh->SetCollisionResponseToChannel(ECC_GrabObstruction, ECR_Ignore);
 	BorderMesh->SetupAttachment(RootComponent);
 
 	SceneCaptureComponent = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("SceneCaptureComponent"));
@@ -219,7 +224,7 @@ void APortal::OnActorMoved(TObjectPtr<ITeleportable> Actor)
 	}
 }
 
-FVector APortal::TeleportLocation(const FVector& Location)
+FVector APortal::TeleportLocation(const FVector& Location) const
 {
 	if (!OtherPortal)
 	{
@@ -230,7 +235,7 @@ FVector APortal::TeleportLocation(const FVector& Location)
 	return OtherPortal->GetTransform().TransformPosition(RelativeLocation);
 }
 
-FRotator APortal::TeleportRotation(const FQuat& Quat)
+FRotator APortal::TeleportRotation(const FQuat& Quat) const
 {
 	if (!OtherPortal)
 	{
@@ -241,12 +246,12 @@ FRotator APortal::TeleportRotation(const FQuat& Quat)
 	return (OtherPortal->GetActorQuat() * RelativeQuat).Rotator();
 }
 
-FRotator APortal::TeleportRotation(const FRotator& Rotator)
+FRotator APortal::TeleportRotation(const FRotator& Rotator) const
 {
 	return TeleportRotation(FQuat(Rotator));
 }
 
-FVector APortal::TeleportVelocity(const FVector& Velocity)
+FVector APortal::TeleportVelocity(const FVector& Velocity) const
 {
 	if (!OtherPortal)
 	{
@@ -321,6 +326,12 @@ void APortal::OnActorEndOverlap(TObjectPtr<AActor> Actor)
 void APortal::TeleportActor(TObjectPtr<ITeleportable> TeleportingActor)
 {
 	TeleportingActor->Teleport(this, OtherPortal);
+	AStarlightGameMode* GameMode = GetWorld()->GetAuthGameMode<AStarlightGameMode>();
+	if (GameMode)
+	{
+		GameMode->OnActorTeleported().Broadcast(TeleportingActor, this, GetConnectedPortal());
+	}
+	
 	UE_LOG(LogPortal, Verbose, TEXT("Portal %s has teleported actor %s"), *GetName(),
 	       *TeleportingActor->CastToTeleportableActor()->GetName());
 }

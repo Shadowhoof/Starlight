@@ -57,4 +57,6 @@ public:
 	
 	virtual FVector GetVelocity() const;
 	virtual void SetVelocity(const FVector& Velocity);
+
+	virtual void OnTeleportableMoved();
 };

@@ -3,7 +3,6 @@
 
 #include "Grab/MotionControllerGrabDevice.h"
 
-#include "MotionControllerComponent.h"
 #include "Grab/Grabbable.h"
 #include "DrawDebugHelpers.h"
 
@@ -13,21 +12,16 @@ namespace GrabConstants
 }
 
 
-void UMotionControllerGrabDevice::Initialize(TObjectPtr<UMotionControllerComponent> Controller)
+void UMotionControllerGrabDevice::Initialize(TObjectPtr<USceneComponent> InOwnerComponent)
 {
-	if (!Controller)
-	{
-		UE_LOG(LogGrab, Error, TEXT("Motion controller for UMotionControllerGrabDevice is nullptr"));
-	}
-	
-	MotionController = Controller;
+	Super::Initialize(InOwnerComponent);
 	GrabTraceShape.SetSphere(GrabConstants::TraceRadius);
 }
 
 bool UMotionControllerGrabDevice::TryGrabbing()
 {
 	TArray<FHitResult> HitResults;
-	const FVector TraceCenter = MotionController->GetComponentLocation();
+	const FVector TraceCenter = OwnerComponent->GetComponentLocation();
 	GetWorld()->SweepMultiByChannel(HitResults, TraceCenter, TraceCenter, FQuat(), ECC_PhysicsBody, GrabTraceShape);
 	DrawDebugSphere(GetWorld(), TraceCenter, GrabConstants::TraceRadius, 16, FColor::Yellow, false, 3);
 
@@ -62,5 +56,5 @@ bool UMotionControllerGrabDevice::TryGrabbing()
 
 TObjectPtr<USceneComponent> UMotionControllerGrabDevice::GetComponentToAttachTo() const
 {
-	return MotionController;
+	return OwnerComponent;
 }

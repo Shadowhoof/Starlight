@@ -17,9 +17,31 @@ AStarlightActor::AStarlightActor()
 	RootComponent = MeshComponent;
 }
 
-TObjectPtr<UPrimitiveComponent> AStarlightActor::GetAttachComponent() const
+TObjectPtr<UPrimitiveComponent> AStarlightActor::GetComponentToGrab() const
 {
 	return MeshComponent;
+}
+
+void AStarlightActor::OnGrab()
+{
+	IGrabbable::OnGrab();
+	bIsGrabbed = true;
+}
+
+void AStarlightActor::OnRelease()
+{
+	IGrabbable::OnRelease();
+	bIsGrabbed = false;
+}
+
+bool AStarlightActor::IsGrabbed() const
+{
+	return bIsGrabbed;
+}
+
+void AStarlightActor::OnGrabbableMoved(const float Speed)
+{
+	GrabbedMovementSpeed = Speed;
 }
 
 void AStarlightActor::OnOverlapWithPortalBegin(TObjectPtr<APortal> Portal)
@@ -81,6 +103,20 @@ FVector AStarlightActor::GetVelocity() const
 void AStarlightActor::SetVelocity(const FVector& Velocity)
 {
 	MeshComponent->SetPhysicsLinearVelocity(Velocity);
+}
+
+void AStarlightActor::NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UPrimitiveComponent* OtherComp,
+                                bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit)
+{
+	Super::NotifyHit(MyComp, Other, OtherComp, bSelfMoved, HitLocation, HitNormal, NormalImpulse, Hit);
+
+	if (!bIsGrabbed || !OtherComp->IsSimulatingPhysics())
+	{
+		return;
+	}
+
+	const FVector Impulse = GrabbedMovementSpeed * -HitNormal;
+	OtherComp->AddImpulseAtLocation(Impulse, HitLocation);
 }
 
 void AStarlightActor::UpdateMaterialParameters()

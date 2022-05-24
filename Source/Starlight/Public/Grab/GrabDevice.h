@@ -14,6 +14,8 @@ class STARLIGHT_API UGrabDevice : public UObject
 	GENERATED_BODY()
 
 public:
+	virtual void Initialize(TObjectPtr<USceneComponent> InOwnerComponent);
+	
 	TObjectPtr<IGrabbable> GetGrabbedObject() const;
 
 	virtual bool TryGrabbing();
@@ -24,14 +26,19 @@ public:
 	/** Releases grabbed object if any is grabbed */
 	virtual void Release();
 
+	virtual void Tick(const float DeltaSeconds);
+	
 protected:
 
 	UPROPERTY()
 	TScriptInterface<IGrabbable> GrabbedObject;
 
-	void OnSuccessfulGrab(TObjectPtr<IGrabbable> ObjectToGrab);
+	UPROPERTY()
+	TObjectPtr<USceneComponent> OwnerComponent;
+	
+	virtual void OnSuccessfulGrab(TObjectPtr<IGrabbable> ObjectToGrab);
 
-	void OnSuccessfulRelease();
+	virtual void OnSuccessfulRelease();
 	
 	virtual TObjectPtr<USceneComponent> GetComponentToAttachTo() const;
 	

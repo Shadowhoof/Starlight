@@ -3,10 +3,12 @@
 
 #include "Portal/PortalComponent.h"
 
+#include "Core/StarlightConstants.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "GameFramework/Character.h"
 #include "Kismet/GameplayStatics.h"
 #include "Portal/Portal.h"
+#include "Portal/PortalStatics.h"
 #include "Portal/PortalSurface.h"
 
 
@@ -73,7 +75,7 @@ void UPortalComponent::ShootPortal(EPortalType PortalType, const FVector& StartL
 
 	ActivePortals[PortalType] = Portal;
 
-	EPortalType OtherPortalType = GetOtherPortalType(PortalType);
+	EPortalType OtherPortalType = UPortalStatics::GetOtherPortalType(PortalType);
 	if (const TObjectPtr<APortal> OtherPortal = ActivePortals[OtherPortalType])
 	{
 		Portal->SetConnectedPortal(OtherPortal);
@@ -167,7 +169,8 @@ bool UPortalComponent::ValidatePortalLocation(EPortalType PortalType, const FHit
 bool UPortalComponent::IsOverlappingWithOtherPortal(EPortalType PortalType, TObjectPtr<APortalSurface> PortalSurface,
                                                     const FVector& LocalCoords, const FVector& Extents) const
 {
-	const TObjectPtr<APortal> OtherPortal = ActivePortals[GetOtherPortalType(PortalType)];
+	const EPortalType OtherPortalType = UPortalStatics::GetOtherPortalType(PortalType);
+	const TObjectPtr<APortal> OtherPortal = ActivePortals[OtherPortalType];
 	if (!OtherPortal)
 	{
 		return false;

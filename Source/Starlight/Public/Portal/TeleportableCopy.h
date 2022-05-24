@@ -28,9 +28,10 @@ public:
 	 * @param InParent Actor that served as a base for this copy
 	 * @param StaticMesh Parent actor's mesh
 	 * @param OwnerPortal Portal that created and owns this copy
+	 * @param OtherPortal Portal connected to the owner
 	 */
-	void Initialize(TObjectPtr<ITeleportable> InParent, TObjectPtr<UStaticMesh> StaticMesh, TObjectPtr<APortal> OwnerPortal, TObjectPtr<
-	                APortal> OtherPortal);
+	void Initialize(TObjectPtr<ITeleportable> InParent, TObjectPtr<UStaticMesh> StaticMesh,
+					TObjectPtr<APortal> OwnerPortal, TObjectPtr<APortal> OtherPortal);
 
 	/**
 	 * Sets up culling parameters for dynamic material

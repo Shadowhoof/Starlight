@@ -7,6 +7,16 @@
 #include "Statics/StarlightMacros.h"
 
 
+void UGrabDevice::Initialize(TObjectPtr<USceneComponent> InOwnerComponent)
+{
+	if (!InOwnerComponent)
+	{
+		UE_LOG(LogGrab, Error, TEXT("Owner component for UGrabDevice is nullptr"));
+	}
+	
+	OwnerComponent = InOwnerComponent;
+}
+
 TObjectPtr<IGrabbable> UGrabDevice::GetGrabbedObject() const
 {
 	return GrabbedObject.GetInterface();
@@ -23,20 +33,11 @@ bool UGrabDevice::Grab(TObjectPtr<IGrabbable> ObjectToGrab)
 	{
 		return false;
 	}
-
-	const TObjectPtr<UPrimitiveComponent> GrabbedComponent = ObjectToGrab->GetAttachComponent();
+	
+	UPrimitiveComponent* GrabbedComponent = ObjectToGrab->GetComponentToGrab();
 	GrabbedComponent->SetSimulatePhysics(false);
-	const bool bIsGrabbed = GrabbedComponent->AttachToComponent(GetComponentToAttachTo(),
-	                                                            {EAttachmentRule::KeepWorld, false});
-	UE_LOG(LogGrab, Verbose, TEXT("Trying to grab actor %s, result: %s"), *GrabbedComponent->GetOwner()->GetName(),
-	       BOOL_TO_STRING(bIsGrabbed));
-
-	if (bIsGrabbed)
-	{
-		OnSuccessfulGrab(ObjectToGrab);
-	}
-
-	return bIsGrabbed;
+	OnSuccessfulGrab(ObjectToGrab);
+	return true;
 }
 
 void UGrabDevice::OnSuccessfulGrab(TObjectPtr<IGrabbable> ObjectToGrab)
@@ -57,11 +58,15 @@ void UGrabDevice::Release()
 {
 	if (GrabbedObject)
 	{
-		const TObjectPtr<UPrimitiveComponent> GrabbedComponent = GrabbedObject->GetAttachComponent();
+		UPrimitiveComponent* GrabbedComponent = GrabbedObject->GetComponentToGrab();
 		GrabbedComponent->SetSimulatePhysics(true);
-		GrabbedComponent->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+		GrabbedComponent->WakeRigidBody();
 		OnSuccessfulRelease();
 	}
+}
+
+void UGrabDevice::Tick(const float DeltaSeconds)
+{
 }
 
 TObjectPtr<USceneComponent> UGrabDevice::GetComponentToAttachTo() const

@@ -79,7 +79,7 @@ void AStarlightCharacter::BeginPlay()
 	else
 	{
 		UTraceGrabDevice* TraceGrabDevice = NewObject<UTraceGrabDevice>(this);
-		TraceGrabDevice->Initialize(this);
+		TraceGrabDevice->Initialize(CameraComponent);
 		GrabDevices.Add(EControllerHand::Special_1, TraceGrabDevice);
 	}
 
@@ -147,6 +147,14 @@ void AStarlightCharacter::SetVelocity(const FVector& Velocity)
 	GetCharacterMovement()->Velocity = Velocity;
 }
 
+void AStarlightCharacter::OnTeleportableMoved()
+{
+	for (APortal* Portal : OverlappingPortals)
+	{
+		Portal->OnActorMoved(this);
+	}
+}
+
 void AStarlightCharacter::LookUp(const float Rate)
 {
 	AddControllerPitchInput(Rate);
@@ -212,6 +220,11 @@ void AStarlightCharacter::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 
 	UpdateRotation(DeltaSeconds);
+
+	for (const auto& Entry : GrabDevices)
+	{
+		Entry.Value->Tick(DeltaSeconds);
+	}
 }
 
 void AStarlightCharacter::Teleport(TObjectPtr<APortal> SourcePortal, TObjectPtr<APortal> TargetPortal)
@@ -263,10 +276,7 @@ void AStarlightCharacter::ShootPortal(EPortalType PortalType)
 
 void AStarlightCharacter::OnMovement(float DeltaSeconds, FVector OldLocation, FVector OldVelocity)
 {
-	for (APortal* Portal : OverlappingPortals)
-	{
-		Portal->OnActorMoved(this);
-	}
+	OnTeleportableMoved();
 }
 
 void AStarlightCharacter::UpdateRotation(const float DeltaSeconds)

@@ -7,12 +7,14 @@
 #include "Portal/PortalConstants.h"
 #include "Portal/PortalSurface.h"
 #include "Portal/CopyStaticMeshComponent.h"
+#include "Portal/PortalStatics.h"
 #include "Statics/StarlightStatics.h"
 
 
 ATeleportableCopy::ATeleportableCopy()
 {
 	StaticMeshComponent = CreateDefaultSubobject<UCopyStaticMeshComponent>(TEXT("StaticMeshComponent"));
+	StaticMeshComponent->SetCollisionResponseToChannel(ECC_GrabObstruction, ECR_Ignore);
 	StaticMeshComponent->SetSimulatePhysics(true);
 	StaticMeshComponent->SetNotifyRigidBodyCollision(true);
 	RootComponent = StaticMeshComponent;
@@ -22,7 +24,7 @@ void ATeleportableCopy::Initialize(TObjectPtr<ITeleportable> InParent, TObjectPt
                                    TObjectPtr<APortal> OwnerPortal, TObjectPtr<APortal> OtherPortal)
 {
 	StaticMeshComponent->SetStaticMesh(StaticMesh);
-	StaticMeshComponent->SetCollisionObjectType(GetCopyObjectType(OwnerPortal->GetPortalType()));
+	StaticMeshComponent->SetCollisionObjectType(UPortalStatics::GetCopyObjectType(OwnerPortal->GetPortalType()));
 	StaticMeshComponent->SetMassOverrideInKg(NAME_None, InParent->GetCollisionComponent()->GetMass());
 
 	ParentTeleportable = InParent->GetTeleportableScriptInterface();

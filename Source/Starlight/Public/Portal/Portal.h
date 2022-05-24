@@ -62,10 +62,10 @@ public:
 
 	void OnActorMoved(TObjectPtr<ITeleportable> Actor);
 
-	FVector TeleportLocation(const FVector& Location);
-	FRotator TeleportRotation(const FQuat& Quat);
-	FRotator TeleportRotation(const FRotator& Rotator);
-	FVector TeleportVelocity(const FVector& Velocity);
+	FVector TeleportLocation(const FVector& Location) const;
+	FRotator TeleportRotation(const FQuat& Quat) const;
+	FRotator TeleportRotation(const FRotator& Rotator) const;
+	FVector TeleportVelocity(const FVector& Velocity) const;
 
 	TObjectPtr<ATeleportableCopy> RetrieveCopyForActor(TObjectPtr<AActor> Actor) const;
 	

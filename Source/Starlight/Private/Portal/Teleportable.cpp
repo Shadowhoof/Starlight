@@ -5,6 +5,7 @@
 
 #include "Portal/Portal.h"
 #include "Portal/PortalConstants.h"
+#include "Portal/PortalStatics.h"
 #include "Portal/PortalSurface.h"
 #include "Portal/TeleportableCopy.h"
 #include "Statics/StarlightStatics.h"
@@ -95,7 +96,7 @@ void ITeleportable::OnOverlapWithPortalBegin(TObjectPtr<APortal> Portal)
 	UE_LOG(LogPortal, Verbose, TEXT("Portal %s is now overlapping with %s"), *Portal->GetName(), *CastToTeleportableActor()->GetName());
 	DisableCollisionWith(Portal->GetPortalSurface());
 
-	const ECollisionChannel ObjectTypeToBlock = GetOpposingCopyObjectType(Portal->GetPortalType());
+	const ECollisionChannel ObjectTypeToBlock = UPortalStatics::GetOpposingCopyObjectType(Portal->GetPortalType());
 	GetCollisionComponent()->SetCollisionResponseToChannel(ObjectTypeToBlock, ECR_Block);
 }
 
@@ -104,7 +105,7 @@ void ITeleportable::OnOverlapWithPortalEnd(TObjectPtr<APortal> Portal)
 	UE_LOG(LogPortal, Verbose, TEXT("Portal %s is no longer overlapping with %s"), *Portal->GetName(), *CastToTeleportableActor()->GetName());
 	EnableCollisionWith(Portal->GetPortalSurface());
 
-	const ECollisionChannel ObjectTypeToIgnore = GetOpposingCopyObjectType(Portal->GetPortalType());
+	const ECollisionChannel ObjectTypeToIgnore = UPortalStatics::GetOpposingCopyObjectType(Portal->GetPortalType());
 	GetCollisionComponent()->SetCollisionResponseToChannel(ObjectTypeToIgnore, ECR_Ignore);
 }
 
@@ -127,6 +128,10 @@ FVector ITeleportable::GetVelocity() const
 }
 
 void ITeleportable::SetVelocity(const FVector& Velocity)
+{
+}
+
+void ITeleportable::OnTeleportableMoved()
 {
 }
 

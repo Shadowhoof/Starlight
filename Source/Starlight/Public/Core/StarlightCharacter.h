@@ -55,7 +55,7 @@ public:
 
 	virtual void Tick(float DeltaSeconds) override;
 	
-	/** teleportable public interface begin */
+	// Teleportable interface begin
 
 	virtual void Teleport(TObjectPtr<APortal> SourcePortal, TObjectPtr<APortal> TargetPortal) override;
 	
@@ -66,8 +66,10 @@ public:
 
 	virtual FVector GetVelocity() const override;
 	virtual void SetVelocity(const FVector& Velocity) override;
+
+	virtual void OnTeleportableMoved() override;
 	
-	/** teleportable public interface end */
+	// Teleportable interface end
 
 protected:
 	virtual void BeginPlay() override;

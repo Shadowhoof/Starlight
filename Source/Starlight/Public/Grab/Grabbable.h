@@ -30,7 +30,9 @@ public:
 	
 	virtual void OnRelease();
 
-	virtual TObjectPtr<UPrimitiveComponent> GetAttachComponent() const;
+	virtual bool IsGrabbed() const;
+	
+	virtual TObjectPtr<UPrimitiveComponent> GetComponentToGrab() const;
 
 	virtual FVector GetLocation();
 
@@ -38,5 +40,7 @@ public:
 
 	TObjectPtr<AActor> CastToGrabbableActor();
 	TObjectPtr<const AActor> CastToGrabbableActor() const;
+
+	virtual void OnGrabbableMoved(const float Speed);
 	
 };

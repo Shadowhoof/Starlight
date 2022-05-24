@@ -11,3 +11,8 @@ AStarlightGameMode::AStarlightGameMode()
 	DefaultPawnClass = AStarlightCharacter::StaticClass();
 	PlayerControllerClass = AStarlightController::StaticClass();
 }
+
+FActorTeleported& AStarlightGameMode::OnActorTeleported()
+{
+	return ActorTeleportedEvent;
+}

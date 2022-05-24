@@ -17,15 +17,20 @@ void IGrabbable::OnRelease()
 	UE_LOG(LogGrab, Verbose, TEXT("Object %s released"), *CastToGrabbableActor()->GetName());
 }
 
-TObjectPtr<UPrimitiveComponent> IGrabbable::GetAttachComponent() const
+bool IGrabbable::IsGrabbed() const
+{
+	return false;
+}
+
+TObjectPtr<UPrimitiveComponent> IGrabbable::GetComponentToGrab() const
 {
 	return nullptr;
 }
 
 FVector IGrabbable::GetLocation()
 {
-	const TObjectPtr<UPrimitiveComponent> AttachComponent = GetAttachComponent();
-	return AttachComponent ? AttachComponent->GetComponentLocation() : FVector::ZeroVector;
+	const TObjectPtr<UPrimitiveComponent> ComponentToGrab = GetComponentToGrab();
+	return ComponentToGrab ? ComponentToGrab->GetComponentLocation() : FVector::ZeroVector;
 }
 
 TScriptInterface<IGrabbable> IGrabbable::GetGrabbableScriptInterface()
@@ -44,4 +49,8 @@ TObjectPtr<AActor> IGrabbable::CastToGrabbableActor()
 TObjectPtr<const AActor> IGrabbable::CastToGrabbableActor() const
 {
 	return Cast<AActor>(this);
+}
+
+void IGrabbable::OnGrabbableMoved(const float Speed)
+{
 }
