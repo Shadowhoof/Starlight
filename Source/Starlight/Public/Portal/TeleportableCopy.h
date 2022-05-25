@@ -27,11 +27,10 @@ public:
 	 * Initializes created teleportable actor copy
 	 * @param InParent Actor that served as a base for this copy
 	 * @param StaticMesh Parent actor's mesh
-	 * @param OwnerPortal Portal that created and owns this copy
-	 * @param OtherPortal Portal connected to the owner
+	 * @param InOwnerPortal Portal that created and owns this copy
 	 */
 	void Initialize(TObjectPtr<ITeleportable> InParent, TObjectPtr<UStaticMesh> StaticMesh,
-					TObjectPtr<APortal> OwnerPortal, TObjectPtr<APortal> OtherPortal);
+					TObjectPtr<APortal> InOwnerPortal);
 
 	/**
 	 * Sets up culling parameters for dynamic material
@@ -44,6 +43,8 @@ public:
 
 	virtual void DispatchPhysicsCollisionHit(const FRigidBodyCollisionInfo& MyInfo, const FRigidBodyCollisionInfo& OtherInfo, const FCollisionImpactData& RigidCollisionData) override;
 
+	TWeakObjectPtr<APortal> GetOwnerPortal() const;
+	
 protected:
 
 	UPROPERTY()
@@ -54,5 +55,8 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<UMaterialInstanceDynamic> DynamicMaterialInstance;
+
+	UPROPERTY()
+	TWeakObjectPtr<APortal> OwnerPortal;
 	
 };

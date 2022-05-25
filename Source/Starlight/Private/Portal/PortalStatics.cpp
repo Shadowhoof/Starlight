@@ -53,6 +53,7 @@ bool UPortalStatics::LineTraceThroughPortal(TObjectPtr<UWorld> World,
                                             FVector Start,
                                             FVector End,
                                             ECollisionChannel Channel,
+                                            TArray<TObjectPtr<APortal>>* CrossedPortals,
                                             FCollisionQueryParams QueryParams,
                                             FCollisionResponseParams ResponseParams)
 {
@@ -73,7 +74,7 @@ bool UPortalStatics::LineTraceThroughPortal(TObjectPtr<UWorld> World,
 			return true;
 		}
 
-		const APortal* HitPortal = Cast<APortal>(OutHitResult.GetActor());
+		APortal* HitPortal = Cast<APortal>(OutHitResult.GetActor());
 		if (!HitPortal)
 		{
 			UE_LOG(LogPortal, Warning, TEXT("Blocking hit via ECC_PortalBody but it's not a portal, hit actor: %s"),
@@ -97,6 +98,11 @@ bool UPortalStatics::LineTraceThroughPortal(TObjectPtr<UWorld> World,
 		Start = HitPortal->TeleportLocation(OutHitResult.Location);
 		End = HitPortal->TeleportLocation(End);
 
+		if (CrossedPortals)
+		{
+			CrossedPortals->Add(HitPortal);
+		}
+		
 		Counter++;
 	}
 

@@ -10,11 +10,12 @@
 #include "Grab/Grabbable.h"
 #include "Portal/Portal.h"
 #include "Portal/PortalStatics.h"
+#include "Portal/TeleportableCopy.h"
 
 namespace TraceGrabConstants
 {
 	const float GrabRange = 250.f;
-	
+
 	const FVector HeldObjectOffset = {150.f, 0.f, 0.f};
 	const float MaxHoldDistance = 250.f;
 	const float MinHoldDotProduct = FMath::Cos(FMath::DegreesToRadians(60.f));
@@ -23,6 +24,11 @@ namespace TraceGrabConstants
 
 bool UTraceGrabDevice::TryGrabbing()
 {
+	if (GrabbedObject)
+	{
+		return false;
+	}
+	
 	FHitResult HitResult;
 	const FVector StartPoint = OwnerComponent->GetComponentLocation();
 	const FVector EndPoint = StartPoint + OwnerComponent->GetComponentRotation().Vector() *
@@ -30,24 +36,45 @@ bool UTraceGrabDevice::TryGrabbing()
 
 	FCollisionQueryParams QueryParams;
 	QueryParams.AddIgnoredActor(PlayerCharacter);
-	GetWorld()->LineTraceSingleByChannel(HitResult, StartPoint, EndPoint, ECC_PhysicsBody, QueryParams);
-
-	if (HitResult.IsValidBlockingHit())
+	TArray<TObjectPtr<APortal>> CrossedPortals;
+	bool bBlockingHit = UPortalStatics::LineTraceThroughPortal(GetWorld(), HitResult, StartPoint, EndPoint,
+	                                                           ECC_PhysicsBody, &CrossedPortals, QueryParams);
+	if (!bBlockingHit)
 	{
-		if (TObjectPtr<IGrabbable> Grabbable = Cast<IGrabbable>(HitResult.GetActor()))
+		return false;
+	}
+
+	AActor* HitActor = HitResult.GetActor();
+	IGrabbable* Grabbable = Cast<IGrabbable>(HitActor);
+	if (!Grabbable)
+	{
+		// Maybe we've hit a teleportable copy. If yes, try to grab its parent.
+		ATeleportableCopy* TeleportableCopy = Cast<ATeleportableCopy>(HitActor);
+		if (TeleportableCopy)
 		{
-			UE_LOG(LogGrab, VeryVerbose, TEXT("Grab trace has hit grabbable actor %s"),
-			       *HitResult.GetActor()->GetName());
-			return Grab(Grabbable);
-		}
-		else
-		{
-			UE_LOG(LogGrab, VeryVerbose, TEXT("Grab trace has hit non-grabbable actor %s"),
-			       *HitResult.GetActor()->GetName());
+			Grabbable = Cast<IGrabbable>(TeleportableCopy->GetParent());
+			APortal* Portal = TeleportableCopy->GetOwnerPortal().Get();
+			if (Portal)
+			{
+				CrossedPortals.Add(Portal->GetConnectedPortal());
+			}
 		}
 	}
 
-	return false;
+	if (!Grabbable)
+	{
+		UE_LOG(LogGrab, Verbose, TEXT("Grab trace has hit non-grabbable actor %s"), *HitActor->GetName());
+		return false;
+	}
+
+	UE_LOG(LogGrab, Verbose, TEXT("Grab trace has hit grabbable actor %s"), *HitResult.GetActor()->GetName());
+	if (!Grab(Grabbable))
+	{
+		return false;
+	}
+
+	HeldThroughPortals.Append(CrossedPortals);
+	return true;
 }
 
 void UTraceGrabDevice::Initialize(TObjectPtr<USceneComponent> InOwnerComponent)
@@ -65,7 +92,7 @@ void UTraceGrabDevice::Initialize(TObjectPtr<USceneComponent> InOwnerComponent)
 void UTraceGrabDevice::Tick(const float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	
+
 	if (!GrabbedObject)
 	{
 		return;
@@ -77,12 +104,12 @@ void UTraceGrabDevice::Tick(const float DeltaSeconds)
 		Release();
 		return;
 	}
-	
+
 	// move grabbed object to new location
 	UPrimitiveComponent* GrabbedComponent = GrabbedObject->GetComponentToGrab();
 	const FVector DesiredLocation = GetDesiredGrabbedObjectLocation();
 	const FVector MovementDelta = DesiredLocation - GrabbedComponent->GetComponentLocation();
-	
+
 	GrabbedComponent->MoveComponent(MovementDelta, GrabbedComponent->GetComponentRotation(), true);
 	GrabbedObject->OnGrabbableMoved(MovementDelta.Length() / DeltaSeconds);
 }
@@ -103,7 +130,8 @@ FVector UTraceGrabDevice::GetDesiredGrabbedObjectLocation() const
 {
 	ensure(GrabbedObject);
 
-	FVector DesiredLocation = OwnerComponent->GetComponentTransform().TransformPosition(TraceGrabConstants::HeldObjectOffset);
+	FVector DesiredLocation = OwnerComponent->GetComponentTransform().
+	                                          TransformPosition(TraceGrabConstants::HeldObjectOffset);
 	for (TWeakObjectPtr<APortal> WeakPassedPortal : HeldThroughPortals)
 	{
 		if (!WeakPassedPortal.IsValid())
@@ -119,13 +147,13 @@ FVector UTraceGrabDevice::GetDesiredGrabbedObjectLocation() const
 }
 
 void UTraceGrabDevice::OnActorTeleported(TObjectPtr<ITeleportable> Actor, TObjectPtr<APortal> SourcePortal,
-										 TObjectPtr<APortal> TargetPortal)
+                                         TObjectPtr<APortal> TargetPortal)
 {
 	if (!GrabbedObject)
 	{
 		return;
 	}
-	
+
 	if (GrabbedObject->CastToGrabbableActor() == Actor->CastToTeleportableActor())
 	{
 		OnGrabbedObjectTeleported(SourcePortal, TargetPortal);
@@ -178,7 +206,7 @@ bool UTraceGrabDevice::ShouldKeepHoldingObject() const
 
 	const FVector OwnerLocation = OwnerComponent->GetComponentLocation();
 	const FVector ObjectLocation = GrabbedObject->GetLocation();
-	
+
 	// get transformed-back point for each portal we're holding an object through
 	FVector TransformedObjectLocation = ObjectLocation;
 	TArray<FVector> TransformedPoints = {ObjectLocation};
@@ -198,10 +226,11 @@ bool UTraceGrabDevice::ShouldKeepHoldingObject() const
 	const FVector ToFirstPointDir = (TransformedPoints[0] - StartPoint).GetSafeNormal();
 	if (ToFirstPointDir.Dot(OwnerComponent->GetComponentRotation().Vector()) < TraceGrabConstants::MinHoldDotProduct)
 	{
-		UE_LOG(LogGrab, VeryVerbose, TEXT("Not facing grabbed object, dot: %.2f, dropping"), ToFirstPointDir.Dot(OwnerComponent->GetComponentRotation().Vector()));
+		UE_LOG(LogGrab, VeryVerbose, TEXT("Not facing grabbed object, dot: %.2f, dropping"),
+		       ToFirstPointDir.Dot(OwnerComponent->GetComponentRotation().Vector()));
 		return false;
 	}
-	
+
 	float DistanceToObject = 0.f;
 	for (const FVector& Point : TransformedPoints)
 	{
@@ -226,9 +255,10 @@ bool UTraceGrabDevice::ShouldKeepHoldingObject() const
 
 	if (DistanceToObject > TraceGrabConstants::MaxHoldDistance)
 	{
-		UE_LOG(LogGrab, VeryVerbose, TEXT("Grabbed object is too far away, distance: %.2f, dropping"), DistanceToObject);
+		UE_LOG(LogGrab, VeryVerbose, TEXT("Grabbed object is too far away, distance: %.2f, dropping"),
+		       DistanceToObject);
 		return false;
 	}
-	
+
 	return true;
 }

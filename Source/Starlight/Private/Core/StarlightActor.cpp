@@ -79,7 +79,7 @@ TObjectPtr<ATeleportableCopy> AStarlightActor::CreatePortalCopy(const FTransform
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 	ATeleportableCopy* Copy = GetWorld()->SpawnActor<ATeleportableCopy>(ATeleportableCopy::StaticClass(),
 	                                                                    SpawnTransform, SpawnParams);
-	Copy->Initialize(ParentActor, MeshComponent->GetStaticMesh(), OwnerPortal, OtherPortal);
+	Copy->Initialize(ParentActor, MeshComponent->GetStaticMesh(), OwnerPortal);
 	return Copy;
 }
 
