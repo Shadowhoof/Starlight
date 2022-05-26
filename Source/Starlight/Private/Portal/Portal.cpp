@@ -29,12 +29,13 @@ APortal::APortal()
 	PortalMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMeshComponent"));
 	PortalMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	PortalMesh->SetCollisionObjectType(ECC_PortalBody);
+	PortalMesh->SetCollisionResponseToChannel(ECC_Portal, ECR_Ignore);
 	PortalMesh->SetCollisionResponseToChannel(ECC_PhysicsBody, ECR_Block);
 	PortalMesh->SetCollisionResponseToChannel(ECC_GrabObstruction, ECR_Block);
 	RootComponent = PortalMesh;
 
 	BorderMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BorderMesh"));
-	BorderMesh->SetCollisionResponseToChannel(ECC_GrabObstruction, ECR_Ignore);
+	BorderMesh->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
 	BorderMesh->SetupAttachment(RootComponent);
 
 	SceneCaptureComponent = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("SceneCaptureComponent"));
@@ -44,6 +45,7 @@ APortal::APortal()
 
 	CollisionBoxComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("CollisionBoxComponent"));
 	CollisionBoxComponent->SetBoxExtent(PortalConstants::BorderCollisionExtent);
+	CollisionBoxComponent->SetRelativeLocation(FVector(PortalConstants::BorderCollisionExtent.X, 0.f, 0.f));
 	CollisionBoxComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	CollisionBoxComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
 	CollisionBoxComponent->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
@@ -115,7 +117,7 @@ void APortal::Tick(float DeltaSeconds)
 }
 
 void APortal::Initialize(const TObjectPtr<APortalSurface> Surface, FVector InLocalCoords, FVector InExtents,
-                         EPortalType InPortalType)
+                         EPortalType InPortalType, TObjectPtr<APortal> InOtherPortal)
 {
 	if (PortalSurface)
 	{
@@ -133,6 +135,7 @@ void APortal::Initialize(const TObjectPtr<APortalSurface> Surface, FVector InLoc
 	LocalCoords = InLocalCoords;
 	PortalType = InPortalType;
 	Extents = InExtents;
+	OtherPortal = InOtherPortal;
 
 	// hide attached surface's mesh when capturing scene so it doesn't occlude the view
 	if (UPrimitiveComponent* SurfaceCollisionComp = PortalSurface->GetAttachedSurfaceComponent())
@@ -197,6 +200,12 @@ FTransform APortal::GetBackfacingRelativeTransform(TObjectPtr<ACharacter> Player
 
 void APortal::SetConnectedPortal(TObjectPtr<APortal> Portal)
 {
+	if (!Portal)
+	{
+		OtherPortal = nullptr;
+		return;
+	}
+	
 	if (!OtherPortal)
 	{
 		for (TScriptInterface<ITeleportable> Teleportable : ActorsInPortalRange)

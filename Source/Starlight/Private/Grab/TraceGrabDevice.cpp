@@ -19,6 +19,7 @@ namespace TraceGrabConstants
 	const FVector HeldObjectOffset = {150.f, 0.f, 0.f};
 	const float MaxHoldDistance = 250.f;
 	const float MinHoldDotProduct = FMath::Cos(FMath::DegreesToRadians(60.f));
+	const float MaxMovementSpeed = 1000.f;
 }
 
 
@@ -107,8 +108,9 @@ void UTraceGrabDevice::Tick(const float DeltaSeconds)
 
 	// move grabbed object to new location
 	UPrimitiveComponent* GrabbedComponent = GrabbedObject->GetComponentToGrab();
-	const FVector DesiredLocation = GetDesiredGrabbedObjectLocation();
-	const FVector MovementDelta = DesiredLocation - GrabbedComponent->GetComponentLocation();
+	const FVector ToDesiredLocation = GetDesiredGrabbedObjectLocation() - GrabbedComponent->GetComponentLocation();
+	const float MaxMoveDistance = TraceGrabConstants::MaxMovementSpeed * DeltaSeconds;
+	const FVector MovementDelta = ToDesiredLocation.GetClampedToMaxSize(MaxMoveDistance);
 
 	GrabbedComponent->MoveComponent(MovementDelta, GrabbedComponent->GetComponentRotation(), true);
 	GrabbedObject->OnGrabbableMoved(MovementDelta.Length() / DeltaSeconds);
@@ -240,6 +242,7 @@ bool UTraceGrabDevice::ShouldKeepHoldingObject() const
 			DistanceToObject += FVector::Distance(StartPoint, HitResult.Location);
 			if (HitResult.GetComponent()->GetCollisionObjectType() != ECC_PortalBody)
 			{
+				UE_LOG(LogGrab, VeryVerbose, TEXT("Object %s is blocking the view to grabbed object, dropping"), *HitResult.GetActor()->GetName())
 				return false;
 			}
 

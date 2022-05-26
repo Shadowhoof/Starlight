@@ -31,8 +31,10 @@ public:
 	 *	@param InLocalCoords local coordinates of portal within portal surface
 	 *	@param InExtents rectangle (YZ) space occupied by portal on the surface (in surface local space)
 	 *	@param InPortalType type of created portal (either first or second)
+	 *	@param InOtherPortal portal to connect to this one
 	 */
-	void Initialize(const TObjectPtr<APortalSurface> Surface, FVector InLocalCoords, FVector InExtents, EPortalType InPortalType);
+	void Initialize(const TObjectPtr<APortalSurface> Surface, FVector InLocalCoords, FVector InExtents,
+					EPortalType InPortalType, TObjectPtr<APortal> InOtherPortal);
 
 	EPortalType GetPortalType() const;
 	

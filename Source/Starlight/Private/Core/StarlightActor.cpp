@@ -3,6 +3,7 @@
 
 #include "Core/StarlightActor.h"
 
+#include "Core/StarlightConstants.h"
 #include "Portal/TeleportableCopy.h"
 #include "Portal/Portal.h"
 
@@ -14,6 +15,10 @@ AStarlightActor::AStarlightActor()
 	MeshComponent->SetSimulatePhysics(true);
 	MeshComponent->SetNotifyRigidBodyCollision(true);
 	MeshComponent->SetCollisionObjectType(ECC_PhysicsBody);
+	MeshComponent->SetCollisionResponseToChannel(ECC_FirstPortalCopy, ECR_Block);
+	MeshComponent->SetCollisionResponseToChannel(ECC_SecondPortalCopy, ECR_Block);
+	MeshComponent->SetCollisionResponseToChannel(ECC_Portal, ECR_Ignore);
+	MeshComponent->SetCollisionResponseToChannel(ECC_GrabObstruction, ECR_Ignore);
 	RootComponent = MeshComponent;
 }
 

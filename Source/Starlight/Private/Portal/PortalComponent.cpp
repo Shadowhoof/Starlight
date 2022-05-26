@@ -34,8 +34,7 @@ void UPortalComponent::ShootPortal(EPortalType PortalType, const FVector& StartL
 {
 	FHitResult HitResult;
 	const FVector EndLocation = StartLocation + Direction * PortalConstants::ShootRange;
-	GetWorld()->LineTraceSingleByChannel(HitResult, StartLocation, EndLocation, ECC_Portal);
-	if (!HitResult.IsValidBlockingHit())
+	if (!GetWorld()->LineTraceSingleByChannel(HitResult, StartLocation, EndLocation, ECC_Portal))
 	{
 		return;
 	}
@@ -57,28 +56,29 @@ void UPortalComponent::ShootPortal(EPortalType PortalType, const FVector& StartL
 		return;
 	}
 
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	TSubclassOf<APortal> PortalClass = PortalClasses[PortalType];
-
-	const FTransform SpawnTransform = FTransform(PortalRotation, PortalLocation);
-	TObjectPtr<APortal> Portal = GetWorld()->SpawnActorDeferred<APortal>(PortalClass, SpawnTransform, nullptr, nullptr,
-	                                                                     ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
-	Portal->Initialize(PortalSurface, PortalLocalCoords, PortalExtents, PortalType);
-	UGameplayStatics::FinishSpawningActor(Portal, SpawnTransform);
-
+	// destroy old portal
 	const bool bThisPortalExisted = ActivePortals[PortalType] != nullptr;
 	if (bThisPortalExisted)
 	{
 		ActivePortals[PortalType]->Destroy();
 	}
+	
+	EPortalType OtherPortalType = UPortalStatics::GetOtherPortalType(PortalType);
+	const TObjectPtr<APortal> OtherPortal = ActivePortals[OtherPortalType];
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	TSubclassOf<APortal> PortalClass = PortalClasses[PortalType];
+	const FTransform SpawnTransform = FTransform(PortalRotation, PortalLocation);
+	TObjectPtr<APortal> Portal = GetWorld()->SpawnActorDeferred<APortal>(PortalClass, SpawnTransform, nullptr, nullptr,
+	                                                                     ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+	Portal->Initialize(PortalSurface, PortalLocalCoords, PortalExtents, PortalType, OtherPortal);
+	UGameplayStatics::FinishSpawningActor(Portal, SpawnTransform);
 
 	ActivePortals[PortalType] = Portal;
 
-	EPortalType OtherPortalType = UPortalStatics::GetOtherPortalType(PortalType);
-	if (const TObjectPtr<APortal> OtherPortal = ActivePortals[OtherPortalType])
+	if (OtherPortal)
 	{
-		Portal->SetConnectedPortal(OtherPortal);
 		OtherPortal->SetConnectedPortal(Portal);
 
 		Portal->SetRenderTargets(RenderTargets[OtherPortalType], RenderTargets[PortalType]);
