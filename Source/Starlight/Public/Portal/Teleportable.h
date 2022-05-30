@@ -55,8 +55,8 @@ public:
 
 	virtual TObjectPtr<UPrimitiveComponent> GetCollisionComponent() const;
 	
-	virtual FVector GetVelocity() const;
-	virtual void SetVelocity(const FVector& Velocity);
+	virtual void GetTeleportVelocity(FVector& LinearVelocity, FVector& AngularVelocity) const;
+	virtual void SetTeleportVelocity(const FVector& LinearVelocity, const FVector& AngularVelocity);
 
 	virtual void OnTeleportableMoved();
 };

@@ -16,7 +16,11 @@ void ITeleportable::Teleport(TObjectPtr<APortal> SourcePortal, TObjectPtr<APorta
 	AActor* AsActor = CastToTeleportableActor();
 	FVector NewLocation = SourcePortal->TeleportLocation(AsActor->GetActorLocation());
 	const FRotator NewRotation = SourcePortal->TeleportRotation(AsActor->GetActorQuat());
-	const FVector NewVelocity = SourcePortal->TeleportVelocity(GetVelocity());
+	
+	FVector LinearVelocity, AngularVelocity;
+	GetTeleportVelocity(LinearVelocity, AngularVelocity);
+	const FVector NewLinearVelocity = SourcePortal->TeleportVelocity(LinearVelocity);
+	const FVector NewAngularVelocity = SourcePortal->TeleportVelocity(AngularVelocity);
 
 	FVector Adjustment;
 	TArray<TObjectPtr<AActor>> IgnoredActors;
@@ -41,8 +45,8 @@ void ITeleportable::Teleport(TObjectPtr<APortal> SourcePortal, TObjectPtr<APorta
 		UE_LOG(LogPortal, Error, TEXT("Actor %s failed to teleport"), *AsActor->GetName());
 		return;
 	}
-	
-	SetVelocity(NewVelocity);
+
+	SetTeleportVelocity(NewLinearVelocity, NewAngularVelocity);
 }
 
 void ITeleportable::EnableCollisionWith(TObjectPtr<APortalSurface> PortalSurface)
@@ -122,12 +126,11 @@ TObjectPtr<UPrimitiveComponent> ITeleportable::GetCollisionComponent() const
 	return nullptr;
 }
 
-FVector ITeleportable::GetVelocity() const
+void ITeleportable::GetTeleportVelocity(FVector& LinearVelocity, FVector& AngularVelocity) const
 {
-	return FVector::ZeroVector;
 }
 
-void ITeleportable::SetVelocity(const FVector& Velocity)
+void ITeleportable::SetTeleportVelocity(const FVector& LinearVelocity, const FVector& AngularVelocity)
 {
 }
 

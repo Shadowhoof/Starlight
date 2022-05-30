@@ -46,8 +46,8 @@ public:
 
 	virtual TObjectPtr<UPrimitiveComponent> GetCollisionComponent() const override;
 
-	virtual FVector GetVelocity() const override;
-	virtual void SetVelocity(const FVector& Velocity) override;
+	virtual void GetTeleportVelocity(FVector& LinearVelocity, FVector& AngularVelocity) const override;
+	virtual void SetTeleportVelocity(const FVector& LinearVelocity, const FVector& AngularVelocity) override;
 
 	// Teleportable interface end
 	

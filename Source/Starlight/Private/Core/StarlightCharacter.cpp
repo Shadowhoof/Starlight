@@ -137,14 +137,15 @@ TObjectPtr<UPrimitiveComponent> AStarlightCharacter::GetCollisionComponent() con
 	return GetCapsuleComponent();
 }
 
-FVector AStarlightCharacter::GetVelocity() const
+void AStarlightCharacter::GetTeleportVelocity(FVector& LinearVelocity, FVector& AngularVelocity) const
 {
-	return GetCharacterMovement()->Velocity;
+	LinearVelocity = GetCharacterMovement()->Velocity;
+	AngularVelocity = FVector::ZeroVector;
 }
 
-void AStarlightCharacter::SetVelocity(const FVector& Velocity)
+void AStarlightCharacter::SetTeleportVelocity(const FVector& LinearVelocity, const FVector& AngularVelocity)
 {
-	GetCharacterMovement()->Velocity = Velocity;
+	GetCharacterMovement()->Velocity = LinearVelocity;
 }
 
 void AStarlightCharacter::OnTeleportableMoved()

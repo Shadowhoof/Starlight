@@ -100,14 +100,16 @@ TObjectPtr<UPrimitiveComponent> AStarlightActor::GetCollisionComponent() const
 	return MeshComponent;
 }
 
-FVector AStarlightActor::GetVelocity() const
+void AStarlightActor::GetTeleportVelocity(FVector& LinearVelocity, FVector& AngularVelocity) const
 {
-	return MeshComponent->GetPhysicsLinearVelocity();
+	LinearVelocity = MeshComponent->GetPhysicsLinearVelocity();
+	AngularVelocity = MeshComponent->GetPhysicsAngularVelocityInRadians();
 }
 
-void AStarlightActor::SetVelocity(const FVector& Velocity)
+void AStarlightActor::SetTeleportVelocity(const FVector& LinearVelocity, const FVector& AngularVelocity)
 {
-	MeshComponent->SetPhysicsLinearVelocity(Velocity);
+	MeshComponent->SetPhysicsLinearVelocity(LinearVelocity);
+	MeshComponent->SetPhysicsAngularVelocityInRadians(AngularVelocity);
 }
 
 void AStarlightActor::NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UPrimitiveComponent* OtherComp,
