@@ -65,7 +65,7 @@ public:
 	void OnActorMoved(TObjectPtr<ITeleportable> Actor);
 
 	FVector TeleportLocation(const FVector& Location) const;
-	FRotator TeleportRotation(const FQuat& Quat) const;
+	FQuat TeleportRotation(const FQuat& Quat) const;
 	FRotator TeleportRotation(const FRotator& Rotator) const;
 	FVector TeleportVelocity(const FVector& Velocity) const;
 
@@ -138,4 +138,6 @@ private:
 	void CreateTeleportableCopy(TObjectPtr<ITeleportable> TeleportingActor);
 	void DeleteTeleportableCopy(int32 ParentObjectId);
 	FTransform CalculateTransformForCopy(TObjectPtr<const AActor> ParentActor) const;
+
+	void UpdateSceneCaptureClipPlane();
 };

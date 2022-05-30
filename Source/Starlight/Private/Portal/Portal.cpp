@@ -40,7 +40,7 @@ APortal::APortal()
 
 	SceneCaptureComponent = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("SceneCaptureComponent"));
 	SceneCaptureComponent->bCaptureEveryFrame = true;
-	SceneCaptureComponent->bOverride_CustomNearClippingPlane = true;
+	SceneCaptureComponent->bEnableClipPlane = true;
 	SceneCaptureComponent->SetupAttachment(RootComponent);
 
 	CollisionBoxComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("CollisionBoxComponent"));
@@ -184,11 +184,12 @@ void APortal::SetRenderTargets(TObjectPtr<UTextureRenderTarget2D> ReadTarget,
 
 	RenderTargetWrite = WriteTarget;
 	SceneCaptureComponent->TextureTarget = WriteTarget;
+
+	UpdateSceneCaptureClipPlane();
 }
 
 void APortal::UpdateSceneCaptureTransform(const FTransform& RelativeTransform)
 {
-	SceneCaptureComponent->CustomNearClippingPlane = RelativeTransform.GetTranslation().Length();
 	SceneCaptureComponent->SetRelativeTransform(RelativeTransform);
 }
 
@@ -215,6 +216,7 @@ void APortal::SetConnectedPortal(TObjectPtr<APortal> Portal)
 	}
 
 	OtherPortal = Portal;
+	UpdateSceneCaptureClipPlane();
 
 	for (const auto& Entry : TeleportableCopies)
 	{
@@ -244,20 +246,20 @@ FVector APortal::TeleportLocation(const FVector& Location) const
 	return OtherPortal->GetTransform().TransformPosition(RelativeLocation);
 }
 
-FRotator APortal::TeleportRotation(const FQuat& Quat) const
+FQuat APortal::TeleportRotation(const FQuat& Quat) const
 {
 	if (!OtherPortal)
 	{
-		return Quat.Rotator();
+		return Quat;
 	}
 
 	const FQuat RelativeQuat = BackfacingComponent->GetComponentQuat().Inverse() * Quat;
-	return (OtherPortal->GetActorQuat() * RelativeQuat).Rotator();
+	return OtherPortal->GetActorQuat() * RelativeQuat;
 }
 
 FRotator APortal::TeleportRotation(const FRotator& Rotator) const
 {
-	return TeleportRotation(FQuat(Rotator));
+	return TeleportRotation(FQuat(Rotator)).Rotator();
 }
 
 FVector APortal::TeleportVelocity(const FVector& Velocity) const
@@ -384,4 +386,15 @@ FTransform APortal::CalculateTransformForCopy(TObjectPtr<const AActor> ParentAct
 {
 	const FTransform RelativeTransform = ParentActor->GetTransform().GetRelativeTransform(GetActorTransform());
 	return RelativeTransform * OtherPortal->BackfacingComponent->GetComponentTransform();
+}
+
+void APortal::UpdateSceneCaptureClipPlane()
+{
+	if (!OtherPortal)
+	{
+		return;
+	}
+
+	SceneCaptureComponent->ClipPlaneBase = GetActorLocation();
+	SceneCaptureComponent->ClipPlaneNormal = GetActorForwardVector();
 }

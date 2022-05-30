@@ -19,7 +19,10 @@ namespace TraceGrabConstants
 	const FVector HeldObjectOffset = {150.f, 0.f, 0.f};
 	const float MaxHoldDistance = 250.f;
 	const float MinHoldDotProduct = FMath::Cos(FMath::DegreesToRadians(60.f));
+	const float NoSightReleaseDelay = 0.5f;
+	
 	const float MaxMovementSpeed = 1000.f;
+	const float MaxRotationSpeedInRadians = FMath::DegreesToRadians(1080.f);
 }
 
 
@@ -99,20 +102,48 @@ void UTraceGrabDevice::Tick(const float DeltaSeconds)
 		return;
 	}
 
+	/* TODO: Code in this method is not very well optimized. There are multiple "teleportations" and "unteleportations"
+	 * through portals which could potentially be done just once and then we'd use the results wherever we need them. */
+	
 	// check line of sight to owner component
 	if (!ShouldKeepHoldingObject())
 	{
-		Release();
-		return;
+		if (!bIsPendingRelease)
+		{
+			bIsPendingRelease = true;
+			ReleaseDelay = TraceGrabConstants::NoSightReleaseDelay;
+		}
+		else
+		{
+			ReleaseDelay -= DeltaSeconds;
+		}
+
+		if (ReleaseDelay <= 0.f)
+		{
+			Release();
+			return;
+		}
+	}
+	else if (bIsPendingRelease)
+	{
+		bIsPendingRelease = false;
 	}
 
-	// move grabbed object to new location
+	// calculate new desired location for grabbed object
 	UPrimitiveComponent* GrabbedComponent = GrabbedObject->GetComponentToGrab();
-	const FVector ToDesiredLocation = GetDesiredGrabbedObjectLocation() - GrabbedComponent->GetComponentLocation();
-	const float MaxMoveDistance = TraceGrabConstants::MaxMovementSpeed * DeltaSeconds;
-	const FVector MovementDelta = ToDesiredLocation.GetClampedToMaxSize(MaxMoveDistance);
+	const FVector GrabbedComponentLocation = GrabbedComponent->GetComponentLocation(); 
+	const FVector ToDesiredLocation = GetDesiredGrabbedObjectLocation() - GrabbedComponentLocation;
+	const float MaxMovementDelta = TraceGrabConstants::MaxMovementSpeed * DeltaSeconds;
+	const FVector MovementDelta = ToDesiredLocation.GetClampedToMaxSize(MaxMovementDelta);
 
-	GrabbedComponent->MoveComponent(MovementDelta, GrabbedComponent->GetComponentRotation(), true);
+	// calculate new desired rotation for grabbed object
+	const FQuat CurrentRotation = GrabbedComponent->GetComponentQuat();
+	const FQuat DesiredRotation = GetDesiredGrabbedObjectRotation();
+	const float RotationDistance = CurrentRotation.AngularDistance(DesiredRotation);
+	const float MaxRotationDelta = TraceGrabConstants::MaxRotationSpeedInRadians * DeltaSeconds;
+	const FQuat NewRotation = FQuat::Slerp(CurrentRotation, DesiredRotation, FMath::Min(MaxRotationDelta / RotationDistance, 1.0));
+	
+	GrabbedComponent->MoveComponent(MovementDelta, NewRotation, true);
 	GrabbedObject->OnGrabbableMoved(MovementDelta.Length() / DeltaSeconds);
 }
 
@@ -125,6 +156,7 @@ void UTraceGrabDevice::OnSuccessfulRelease()
 {
 	Super::OnSuccessfulRelease();
 
+	bIsPendingRelease = false;
 	HeldThroughPortals.Empty();
 }
 
@@ -201,31 +233,26 @@ void UTraceGrabDevice::OnOwnerCharacterTeleported(TObjectPtr<APortal> SourcePort
 
 bool UTraceGrabDevice::ShouldKeepHoldingObject() const
 {
-	if (!GrabbedObject)
-	{
-		return false;
-	}
-
 	const FVector OwnerLocation = OwnerComponent->GetComponentLocation();
 	const FVector ObjectLocation = GrabbedObject->GetLocation();
 
 	// get transformed-back point for each portal we're holding an object through
 	FVector TransformedObjectLocation = ObjectLocation;
-	TArray<FVector> TransformedPoints = {ObjectLocation};
+	TArray<TTuple<FVector, APortal*>> TransformedPointMap = {{ObjectLocation, nullptr}};
 	for (int32 Index = HeldThroughPortals.Num() - 1; Index >= 0; --Index)
 	{
 		APortal* Portal = HeldThroughPortals[Index].Get();
 		APortal* BackwardsPortal = Portal->GetConnectedPortal();
 		TransformedObjectLocation = BackwardsPortal->TeleportLocation(TransformedObjectLocation);
-		TransformedPoints.Add(FVector(TransformedObjectLocation));
+		TransformedPointMap.Add({TransformedObjectLocation, Portal});
 	}
 
-	Algo::Reverse(TransformedPoints);
+	Algo::Reverse(TransformedPointMap);
 	FVector StartPoint = OwnerLocation;
 
 	// Check whether we're facing the grabbed object. First point is enough to determine that because angle between
 	// direction to object and direction the owner is facing will stay the same after transformation via portals.
-	const FVector ToFirstPointDir = (TransformedPoints[0] - StartPoint).GetSafeNormal();
+	const FVector ToFirstPointDir = (TransformedPointMap[0].Key - StartPoint).GetSafeNormal();
 	if (ToFirstPointDir.Dot(OwnerComponent->GetComponentRotation().Vector()) < TraceGrabConstants::MinHoldDotProduct)
 	{
 		UE_LOG(LogGrab, VeryVerbose, TEXT("Not facing grabbed object, dot: %.2f, dropping"),
@@ -234,13 +261,15 @@ bool UTraceGrabDevice::ShouldKeepHoldingObject() const
 	}
 
 	float DistanceToObject = 0.f;
-	for (const FVector& Point : TransformedPoints)
+	for (const auto& Entry : TransformedPointMap)
 	{
+		const FVector& Point = Entry.Key;
+		const APortal* Portal = Entry.Value;
 		FHitResult HitResult;
 		if (GetWorld()->LineTraceSingleByChannel(HitResult, StartPoint, Point, ECC_GrabObstruction))
 		{
 			DistanceToObject += FVector::Distance(StartPoint, HitResult.Location);
-			if (HitResult.GetComponent()->GetCollisionObjectType() != ECC_PortalBody)
+			if (HitResult.GetActor() != Portal)
 			{
 				UE_LOG(LogGrab, VeryVerbose, TEXT("Object %s is blocking the view to grabbed object, dropping"), *HitResult.GetActor()->GetName())
 				return false;
@@ -264,4 +293,21 @@ bool UTraceGrabDevice::ShouldKeepHoldingObject() const
 	}
 
 	return true;
+}
+
+FQuat UTraceGrabDevice::GetDesiredGrabbedObjectRotation()
+{
+	FVector Location = GrabbedObject->GetLocation();
+	for (int32 Index = HeldThroughPortals.Num() - 1; Index >= 0; --Index)
+	{
+		const APortal* BackwardsPortal = HeldThroughPortals[Index]->GetConnectedPortal();
+		Location = BackwardsPortal->TeleportLocation(Location);
+	}
+
+	FQuat OwnerSpaceRotation = (Location - OwnerComponent->GetComponentLocation()).ToOrientationQuat();
+	for (TWeakObjectPtr<APortal> Portal : HeldThroughPortals)
+	{
+		OwnerSpaceRotation = Portal->TeleportRotation(OwnerSpaceRotation);
+	}
+	return OwnerSpaceRotation;
 }

@@ -15,7 +15,7 @@ void ITeleportable::Teleport(TObjectPtr<APortal> SourcePortal, TObjectPtr<APorta
 {
 	AActor* AsActor = CastToTeleportableActor();
 	FVector NewLocation = SourcePortal->TeleportLocation(AsActor->GetActorLocation());
-	const FRotator NewRotation = SourcePortal->TeleportRotation(AsActor->GetActorQuat());
+	const FRotator NewRotation = SourcePortal->TeleportRotation(AsActor->GetActorQuat()).Rotator();
 	
 	FVector LinearVelocity, AngularVelocity;
 	GetTeleportVelocity(LinearVelocity, AngularVelocity);

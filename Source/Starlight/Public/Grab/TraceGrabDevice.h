@@ -40,6 +40,9 @@ private:
 	/** Portals between trace device and grabbed object */
 	UPROPERTY()
 	TArray<TWeakObjectPtr<APortal>> HeldThroughPortals;
+
+	bool bIsPendingRelease = false;
+	float ReleaseDelay = 0.f;
 	
 private:
 
@@ -51,5 +54,7 @@ private:
 	void OnOwnerCharacterTeleported(TObjectPtr<APortal> SourcePortal, TObjectPtr<APortal> TargetPortal);
 
 	bool ShouldKeepHoldingObject() const;
+
+	FQuat GetDesiredGrabbedObjectRotation();
 
 };

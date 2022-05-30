@@ -4,6 +4,7 @@
 #include "Core/StarlightActor.h"
 
 #include "Core/StarlightConstants.h"
+#include "Grab/GrabConstants.h"
 #include "Portal/TeleportableCopy.h"
 #include "Portal/Portal.h"
 
@@ -122,8 +123,8 @@ void AStarlightActor::NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UPri
 		return;
 	}
 
-	const FVector Impulse = GrabbedMovementSpeed * -HitNormal;
-	OtherComp->AddImpulseAtLocation(Impulse, HitLocation);
+	const float ImpulseStrength = GrabbedMovementSpeed * MeshComponent->BodyInstance.GetBodyMass() * GrabConstants::GrabImpulseMultiplier;
+	OtherComp->AddImpulseAtLocation(ImpulseStrength * -HitNormal, HitLocation);
 }
 
 void AStarlightActor::UpdateMaterialParameters()
