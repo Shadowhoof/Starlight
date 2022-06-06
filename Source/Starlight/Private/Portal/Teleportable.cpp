@@ -139,8 +139,23 @@ void ITeleportable::OnTeleportableMoved()
 }
 
 TObjectPtr<ATeleportableCopy> ITeleportable::CreatePortalCopy(const FTransform& SpawnTransform,
-                                                              TObjectPtr<APortal> OwnerPortal, TObjectPtr<APortal> OtherPortal, TObjectPtr<ITeleportable> ParentActor)
+                                                              TObjectPtr<APortal> OwnerPortal, TObjectPtr<APortal> OtherPortal)
 {
-	UE_LOG(LogPortal, Error, TEXT("CreateCopy() is not implemented for %s"), *CastToTeleportableActor()->GetClass()->GetName());
+	const TSubclassOf<ATeleportableCopy> CopyClass = GetPortalCopyClass();
+	if (!CopyClass)
+	{
+		UE_LOG(LogPortal, Error, TEXT("CreateCopy() is not implemented for %s"), *CastToTeleportableActor()->GetClass()->GetName());
+		return nullptr;
+	}
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	ATeleportableCopy* Copy = OwnerPortal->GetWorld()->SpawnActor<ATeleportableCopy>(CopyClass, SpawnTransform, SpawnParams);
+	Copy->Initialize(this, OwnerPortal);
+	return Copy;
+}
+
+TSubclassOf<ATeleportableCopy> ITeleportable::GetPortalCopyClass() const
+{
 	return nullptr;
 }

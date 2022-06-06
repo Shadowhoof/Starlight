@@ -11,6 +11,7 @@
 #include "Portal/Portal.h"
 #include "Portal/PortalConstants.h"
 #include "Portal/PortalComponent.h"
+#include "Portal/SkeletalTeleportableCopy.h"
 #include "Statics/StarlightStatics.h"
 
 
@@ -40,6 +41,10 @@ AStarlightCharacter::AStarlightCharacter()
 
 	TeleportComponent = CreateDefaultSubobject<UTeleportComponent>(TEXT("TeleportComponent"));
 	PortalComponent = CreateDefaultSubobject<UPortalComponent>(TEXT("PortalComponent"));
+
+	PortalCopyClass = ASkeletalTeleportableCopy::StaticClass();
+	
+	GetMesh()->bOwnerNoSee = true;
 }
 
 void AStarlightCharacter::BeginPlay()
@@ -154,6 +159,11 @@ void AStarlightCharacter::OnTeleportableMoved()
 	{
 		Portal->OnActorMoved(this);
 	}
+}
+
+TSubclassOf<ATeleportableCopy> AStarlightCharacter::GetPortalCopyClass() const
+{
+	return PortalCopyClass;
 }
 
 void AStarlightCharacter::LookUp(const float Rate)

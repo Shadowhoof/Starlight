@@ -7,6 +7,7 @@
 #include "Grab/GrabConstants.h"
 #include "Portal/TeleportableCopy.h"
 #include "Portal/Portal.h"
+#include "Portal/StaticTeleportableCopy.h"
 
 AStarlightActor::AStarlightActor()
 {
@@ -76,17 +77,9 @@ void AStarlightActor::Tick(float DeltaSeconds)
 	}
 }
 
-TObjectPtr<ATeleportableCopy> AStarlightActor::CreatePortalCopy(const FTransform& SpawnTransform,
-                                                                TObjectPtr<APortal> OwnerPortal,
-                                                                TObjectPtr<APortal> OtherPortal,
-                                                                TObjectPtr<ITeleportable> ParentActor)
+TSubclassOf<ATeleportableCopy> AStarlightActor::GetPortalCopyClass() const
 {
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	ATeleportableCopy* Copy = GetWorld()->SpawnActor<ATeleportableCopy>(ATeleportableCopy::StaticClass(),
-	                                                                    SpawnTransform, SpawnParams);
-	Copy->Initialize(ParentActor, MeshComponent->GetStaticMesh(), OwnerPortal);
-	return Copy;
+	return AStaticTeleportableCopy::StaticClass();
 }
 
 void AStarlightActor::BeginPlay()

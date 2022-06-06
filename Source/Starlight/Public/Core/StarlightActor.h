@@ -39,11 +39,8 @@ public:
 
 	virtual void Tick(float DeltaSeconds) override;
 
-	virtual TObjectPtr<ATeleportableCopy> CreatePortalCopy(const FTransform& SpawnTransform,
-	                                                       TObjectPtr<APortal> OwnerPortal,
-	                                                       TObjectPtr<APortal> OtherPortal,
-	                                                       TObjectPtr<ITeleportable> ParentActor) override;
-
+	virtual TSubclassOf<ATeleportableCopy> GetPortalCopyClass() const override;
+	
 	virtual TObjectPtr<UPrimitiveComponent> GetCollisionComponent() const override;
 
 	virtual void GetTeleportVelocity(FVector& LinearVelocity, FVector& AngularVelocity) const override;

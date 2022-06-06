@@ -4,16 +4,14 @@
 
 #include "CoreMinimal.h"
 #include "Teleportable.h"
-#include "CopyStaticMeshComponent.h"
 #include "GameFramework/Actor.h"
 #include "TeleportableCopy.generated.h"
 
 class APortal;
-class AStarlightActor;
 enum class EPortalType : uint8;
 
 
-UCLASS()
+UCLASS(Abstract)
 class STARLIGHT_API ATeleportableCopy : public AActor
 {
 	GENERATED_BODY()
@@ -22,41 +20,39 @@ public:
 	
 	ATeleportableCopy();
 
-	// TODO - support actors with skeletal meshes
 	/**
 	 * Initializes created teleportable actor copy
 	 * @param InParent Actor that served as a base for this copy
-	 * @param StaticMesh Parent actor's mesh
 	 * @param InOwnerPortal Portal that created and owns this copy
 	 */
-	void Initialize(TObjectPtr<ITeleportable> InParent, TObjectPtr<UStaticMesh> StaticMesh,
-					TObjectPtr<APortal> InOwnerPortal);
+	virtual void Initialize(TObjectPtr<ITeleportable> InParent, TObjectPtr<APortal> InOwnerPortal);
 
 	/**
-	 * Sets up culling parameters for dynamic material
+	 * Sets up culling parameters for dynamic materials
 	 */
 	void UpdateCullingParams(const FVector& CullPlaneCenter, const FVector& CullPlaneNormal);
 	
-	TObjectPtr<AActor> GetParent() const;
+	virtual TObjectPtr<AActor> GetParent() const;
 
-	void ResetVelocity();
-
-	virtual void DispatchPhysicsCollisionHit(const FRigidBodyCollisionInfo& MyInfo, const FRigidBodyCollisionInfo& OtherInfo, const FCollisionImpactData& RigidCollisionData) override;
+	virtual void ResetVelocity();
 
 	TWeakObjectPtr<APortal> GetOwnerPortal() const;
 	
 protected:
 
 	UPROPERTY()
-	TObjectPtr<UCopyStaticMeshComponent> StaticMeshComponent;
+	TArray<TObjectPtr<UMaterialInstanceDynamic>> DynamicMaterialInstances;
 
 	UPROPERTY()
 	TObjectPtr<AActor> ParentActor;
-
-	UPROPERTY()
-	TObjectPtr<UMaterialInstanceDynamic> DynamicMaterialInstance;
-
+	
 	UPROPERTY()
 	TWeakObjectPtr<APortal> OwnerPortal;
+
+protected:
+
+	void DisableCollisionWithPortal(TObjectPtr<UPrimitiveComponent> CollisionComponent);
+	
+	void CreateDynamicInstances(TObjectPtr<UMeshComponent> MeshComponent);
 	
 };

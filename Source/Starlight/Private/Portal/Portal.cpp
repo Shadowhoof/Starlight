@@ -364,7 +364,7 @@ void APortal::CreateTeleportableCopy(TObjectPtr<ITeleportable> TeleportingActor)
 {
 	AActor* ParentActor = TeleportingActor->CastToTeleportableActor();
 	const FTransform CopyTransform = CalculateTransformForCopy(ParentActor);
-	ATeleportableCopy* Copy = TeleportingActor->CreatePortalCopy(CopyTransform, this, OtherPortal, TeleportingActor);
+	ATeleportableCopy* Copy = TeleportingActor->CreatePortalCopy(CopyTransform, this, OtherPortal);
 	if (Copy)
 	{
 		TeleportableCopies.Add(ParentActor->GetUniqueID(), Copy);

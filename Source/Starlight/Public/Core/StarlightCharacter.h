@@ -54,11 +54,11 @@ public:
 	FVector GetMovementRightVector() const;
 
 	virtual void Tick(float DeltaSeconds) override;
-	
+
 	// Teleportable interface begin
 
 	virtual void Teleport(TObjectPtr<APortal> SourcePortal, TObjectPtr<APortal> TargetPortal) override;
-	
+
 	virtual void OnOverlapWithPortalBegin(TObjectPtr<APortal> Portal) override;
 	virtual void OnOverlapWithPortalEnd(TObjectPtr<APortal> Portal) override;
 
@@ -68,7 +68,9 @@ public:
 	virtual void SetTeleportVelocity(const FVector& LinearVelocity, const FVector& AngularVelocity) override;
 
 	virtual void OnTeleportableMoved() override;
-	
+
+	virtual TSubclassOf<ATeleportableCopy> GetPortalCopyClass() const override;
+
 	// Teleportable interface end
 
 protected:
@@ -96,9 +98,12 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement")
 	EMovementType MovementType = EMovementType::Continuous;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Portal")
+	TSubclassOf<ATeleportableCopy> PortalCopyClass;
+	
 	UPROPERTY(Transient)
 	TObjectPtr<APlayerController> PlayerController;
-	
+
 private:
 	UPROPERTY(Transient)
 	TMap<EControllerHand, TObjectPtr<UGrabDevice>> GrabDevices;

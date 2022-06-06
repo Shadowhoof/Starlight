@@ -6,49 +6,26 @@
 #include "Portal/Portal.h"
 #include "Portal/PortalConstants.h"
 #include "Portal/PortalSurface.h"
-#include "Portal/CopyStaticMeshComponent.h"
-#include "Portal/PortalStatics.h"
 #include "Statics/StarlightStatics.h"
 
 
 ATeleportableCopy::ATeleportableCopy()
 {
-	StaticMeshComponent = CreateDefaultSubobject<UCopyStaticMeshComponent>(TEXT("StaticMeshComponent"));
-	StaticMeshComponent->SetCollisionResponseToChannel(ECC_GrabObstruction, ECR_Ignore);
-	StaticMeshComponent->SetSimulatePhysics(true);
-	StaticMeshComponent->SetNotifyRigidBodyCollision(true);
-	RootComponent = StaticMeshComponent;
 }
 
-void ATeleportableCopy::Initialize(TObjectPtr<ITeleportable> InParent, TObjectPtr<UStaticMesh> StaticMesh,
-                                   TObjectPtr<APortal> InOwnerPortal)
+void ATeleportableCopy::Initialize(TObjectPtr<ITeleportable> InParent, TObjectPtr<APortal> InOwnerPortal)
 {
-	UPrimitiveComponent* ParentCollisionComponent = InParent->GetCollisionComponent();
-	
-	StaticMeshComponent->SetStaticMesh(StaticMesh);
-	StaticMeshComponent->SetCollisionObjectType(UPortalStatics::GetCopyObjectType(InOwnerPortal->GetPortalType()));
-	StaticMeshComponent->SetMassOverrideInKg(NAME_None, ParentCollisionComponent->GetBodyInstance()->GetBodyMass());
-
-	ParentActor = InParent->CastToTeleportableActor();
 	OwnerPortal = InOwnerPortal;
-
-	DynamicMaterialInstance = StaticMeshComponent->CreateDynamicMaterialInstance(0);
-	DynamicMaterialInstance->SetScalarParameterValue(PortalConstants::CanBeCulledParam, PortalConstants::FloatTrue);
-
-	TArray<TObjectPtr<UPrimitiveComponent>> SurfaceCollisionComponents;
-	InOwnerPortal->GetConnectedPortal()->GetPortalSurface()->GetCollisionComponents(SurfaceCollisionComponents);
-	for (UPrimitiveComponent* CollisionComponent : SurfaceCollisionComponents)
-	{
-		UStarlightStatics::DisableCollisionBetween(StaticMeshComponent, CollisionComponent);
-	}
-
-	StaticMeshComponent->SetLinkedComponent(ParentCollisionComponent);
+	ParentActor = InParent->CastToTeleportableActor();
 }
 
 void ATeleportableCopy::UpdateCullingParams(const FVector& CullPlaneCenter, const FVector& CullPlaneNormal)
 {
-	DynamicMaterialInstance->SetVectorParameterValue(PortalConstants::CullPlaneCenterParam, CullPlaneCenter);
-	DynamicMaterialInstance->SetVectorParameterValue(PortalConstants::CullPlaneNormalParam, CullPlaneNormal);
+	for (UMaterialInstanceDynamic* Instance : DynamicMaterialInstances)
+	{
+		Instance->SetVectorParameterValue(PortalConstants::CullPlaneCenterParam, CullPlaneCenter);
+		Instance->SetVectorParameterValue(PortalConstants::CullPlaneNormalParam, CullPlaneNormal);
+	}
 }
 
 TObjectPtr<AActor> ATeleportableCopy::GetParent() const
@@ -58,28 +35,31 @@ TObjectPtr<AActor> ATeleportableCopy::GetParent() const
 
 void ATeleportableCopy::ResetVelocity()
 {
-	StaticMeshComponent->SetPhysicsLinearVelocity(FVector::ZeroVector);
-	StaticMeshComponent->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
-}
-
-void ATeleportableCopy::DispatchPhysicsCollisionHit(const FRigidBodyCollisionInfo& MyInfo,
-                                                    const FRigidBodyCollisionInfo& OtherInfo,
-                                                    const FCollisionImpactData& RigidCollisionData)
-{
-	Super::DispatchPhysicsCollisionHit(MyInfo, OtherInfo, RigidCollisionData);
-
-	// for now only collide with physics bodies because otherwise we'll be constantly colliding with the floor and
-	// propagating that force to the parent
-	if (OtherInfo.Component.IsValid() && OtherInfo.Component->GetCollisionObjectType() == ECC_PhysicsBody)
-	{
-		const FVector TotalImpulse = RigidCollisionData.TotalNormalImpulse;
-		const FRigidBodyContactInfo& Contact = RigidCollisionData.ContactInfos[0];
-		const FVector Impulse = Contact.ContactNormal.Dot(TotalImpulse.GetSafeNormal()) > 0.f ? TotalImpulse : -TotalImpulse;
-		StaticMeshComponent->OnPhysicsImpulseApplied(Impulse, Contact.ContactPosition);
-	}
 }
 
 TWeakObjectPtr<APortal> ATeleportableCopy::GetOwnerPortal() const
 {
 	return OwnerPortal;
+}
+
+void ATeleportableCopy::DisableCollisionWithPortal(TObjectPtr<UPrimitiveComponent> CollisionComponent)
+{
+	TArray<TObjectPtr<UPrimitiveComponent>> SurfaceCollisionComponents;
+	OwnerPortal->GetConnectedPortal()->GetPortalSurface()->GetCollisionComponents(SurfaceCollisionComponents);
+	for (UPrimitiveComponent* SurfaceCollisionComponent : SurfaceCollisionComponents)
+	{
+		UStarlightStatics::DisableCollisionBetween(SurfaceCollisionComponent, CollisionComponent);
+	}
+}
+
+void ATeleportableCopy::CreateDynamicInstances(TObjectPtr<UMeshComponent> MeshComponent)
+{
+	const int32 MaterialCount = MeshComponent->GetMaterials().Num();
+	DynamicMaterialInstances.Reset(MaterialCount);
+	for (int32 Index = 0; Index < MaterialCount; ++Index)
+	{
+		UMaterialInstanceDynamic* Instance = MeshComponent->CreateAndSetMaterialInstanceDynamic(Index);
+		Instance->SetScalarParameterValue(PortalConstants::CanBeCulledParam, PortalConstants::FloatTrue);
+		DynamicMaterialInstances.Add(Instance);
+	}
 }
