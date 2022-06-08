@@ -24,9 +24,11 @@ void ASkeletalTeleportableCopy::Initialize(TObjectPtr<ITeleportable> InParent, T
 
 	const AStarlightCharacter* Character = Cast<AStarlightCharacter>(InParent.Get());
 	
+	const UCapsuleComponent* ParentCapsule = Character->GetCapsuleComponent();
 	float CapsuleRadius, CapsuleHalfHeight;
-	Character->GetCapsuleComponent()->GetScaledCapsuleSize(CapsuleRadius, CapsuleHalfHeight);
+	ParentCapsule->GetScaledCapsuleSize(CapsuleRadius, CapsuleHalfHeight);
 	CapsuleComponent->SetCapsuleSize(CapsuleRadius, CapsuleHalfHeight);
+	CapsuleComponent->SetCollisionResponseToChannels(ParentCapsule->GetCollisionResponseToChannels());
 
 	ParentMeshComponent = Character->GetMesh();
 	SkeletalMeshComponent->SetSkeletalMesh(ParentMeshComponent->SkeletalMesh);

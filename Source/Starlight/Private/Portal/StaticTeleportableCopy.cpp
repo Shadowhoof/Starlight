@@ -11,7 +11,6 @@
 AStaticTeleportableCopy::AStaticTeleportableCopy()
 {
 	StaticMeshComponent = CreateDefaultSubobject<UCopyStaticMeshComponent>(TEXT("StaticMeshComponent"));
-	StaticMeshComponent->SetCollisionResponseToChannel(ECC_GrabObstruction, ECR_Ignore);
 	StaticMeshComponent->SetSimulatePhysics(true);
 	StaticMeshComponent->SetNotifyRigidBodyCollision(true);
 	RootComponent = StaticMeshComponent;
@@ -28,6 +27,9 @@ void AStaticTeleportableCopy::Initialize(TObjectPtr<ITeleportable> InParent, TOb
 	StaticMeshComponent->SetCollisionObjectType(UPortalStatics::GetCopyObjectType(InOwnerPortal->GetPortalType()));
 	StaticMeshComponent->SetMassOverrideInKg(NAME_None, ParentCollisionComponent->GetBodyInstance()->GetBodyMass());
 	StaticMeshComponent->SetLinkedComponent(ParentCollisionComponent);
+
+	StaticMeshComponent->SetCollisionResponseToChannels(ParentMeshComponent->GetCollisionResponseToChannels());
+	StaticMeshComponent->SetCollisionResponseToChannel(ECC_GrabObstruction, ECR_Ignore);
 
 	DisableCollisionWithPortal(StaticMeshComponent);
 	CreateDynamicInstances(StaticMeshComponent);
