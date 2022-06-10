@@ -20,7 +20,7 @@ void AStaticTeleportableCopy::Initialize(TObjectPtr<ITeleportable> InParent, TOb
 {
 	Super::Initialize(InParent, InOwnerPortal);
 	
-	static UStaticMeshComponent* ParentMeshComponent = Cast<UStaticMeshComponent>(ParentActor->GetComponentByClass(UStaticMeshComponent::StaticClass()));
+	UStaticMeshComponent* ParentMeshComponent = Cast<UStaticMeshComponent>(ParentActor->GetComponentByClass(UStaticMeshComponent::StaticClass()));
 	StaticMeshComponent->SetStaticMesh(ParentMeshComponent->GetStaticMesh());
 
 	UPrimitiveComponent* ParentCollisionComponent = InParent->GetCollisionComponent();
@@ -28,7 +28,7 @@ void AStaticTeleportableCopy::Initialize(TObjectPtr<ITeleportable> InParent, TOb
 	StaticMeshComponent->SetMassOverrideInKg(NAME_None, ParentCollisionComponent->GetBodyInstance()->GetBodyMass());
 	StaticMeshComponent->SetLinkedComponent(ParentCollisionComponent);
 
-	StaticMeshComponent->SetCollisionResponseToChannels(ParentMeshComponent->GetCollisionResponseToChannels());
+	StaticMeshComponent->SetCollisionResponseToChannels(ParentCollisionComponent->GetCollisionResponseToChannels());
 	StaticMeshComponent->SetCollisionResponseToChannel(ECC_GrabObstruction, ECR_Ignore);
 
 	DisableCollisionWithPortal(StaticMeshComponent);
@@ -47,9 +47,10 @@ void AStaticTeleportableCopy::DispatchPhysicsCollisionHit(const FRigidBodyCollis
 {
 	Super::DispatchPhysicsCollisionHit(MyInfo, OtherInfo, RigidCollisionData);
 
-	// for now only collide with physics bodies because otherwise we'll be constantly colliding with the floor and
+	// for now only collide with certain object types because otherwise we'll be constantly colliding with the floor and
 	// propagating that force to the parent
-	if (OtherInfo.Component.IsValid() && OtherInfo.Component->GetCollisionObjectType() == ECC_PhysicsBody)
+	static const TSet PropagatedObjectTypes = {ECC_PhysicsBody, ECC_Pawn, ECC_WithinFirstPortal, ECC_WithinSecondPortal, ECC_WithinBothPortals};
+	if (OtherInfo.Component.IsValid() && PropagatedObjectTypes.Contains(OtherInfo.Component->GetCollisionObjectType()))
 	{
 		const FVector TotalImpulse = RigidCollisionData.TotalNormalImpulse;
 		const FRigidBodyContactInfo& Contact = RigidCollisionData.ContactInfos[0];

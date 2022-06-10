@@ -166,6 +166,11 @@ TSubclassOf<ATeleportableCopy> AStarlightCharacter::GetPortalCopyClass() const
 	return PortalCopyClass;
 }
 
+ECollisionChannel AStarlightCharacter::GetTeleportableBaseObjectType()
+{
+	return ECC_Pawn;
+}
+
 void AStarlightCharacter::LookUp(const float Rate)
 {
 	AddControllerPitchInput(Rate);

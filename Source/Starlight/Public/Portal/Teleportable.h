@@ -40,12 +40,12 @@ public:
 	TObjectPtr<const AActor> CastToTeleportableActor() const;
 
 	/**
-	 * Called when portal is nearby and object can potentially be teleported soon. Called only when there is a
-	 * connected portal present.
+	 * Called when this object is inside portal's inner collision box and it might potentially be teleported soon.
+	 * Called only when there is a connected portal present. 
 	 */
 	virtual void OnOverlapWithPortalBegin(TObjectPtr<APortal> Portal);
 
-	/** Called when character is no longer within portal's teleport detection range */
+	/** Called when character is no longer within portal's inner collision box range */
 	virtual void OnOverlapWithPortalEnd(TObjectPtr<APortal> Portal);
 
 	TScriptInterface<ITeleportable> GetTeleportableScriptInterface();
@@ -61,4 +61,7 @@ public:
 	virtual void SetTeleportVelocity(const FVector& LinearVelocity, const FVector& AngularVelocity);
 
 	virtual void OnTeleportableMoved();
+
+	/* Returns base object type of a teleportable object so it can be restored when object leaves portal inner collision box. */
+	virtual ECollisionChannel GetTeleportableBaseObjectType();
 };

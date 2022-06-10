@@ -71,6 +71,8 @@ public:
 
 	virtual TSubclassOf<ATeleportableCopy> GetPortalCopyClass() const override;
 
+	virtual ECollisionChannel GetTeleportableBaseObjectType() override;
+
 	// Teleportable interface end
 
 protected:

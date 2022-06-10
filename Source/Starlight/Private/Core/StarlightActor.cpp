@@ -17,8 +17,6 @@ AStarlightActor::AStarlightActor()
 	MeshComponent->SetSimulatePhysics(true);
 	MeshComponent->SetNotifyRigidBodyCollision(true);
 	MeshComponent->SetCollisionObjectType(ECC_PhysicsBody);
-	MeshComponent->SetCollisionResponseToChannel(ECC_FirstPortalCopy, ECR_Block);
-	MeshComponent->SetCollisionResponseToChannel(ECC_SecondPortalCopy, ECR_Block);
 	MeshComponent->SetCollisionResponseToChannel(ECC_Portal, ECR_Ignore);
 	MeshComponent->SetCollisionResponseToChannel(ECC_GrabObstruction, ECR_Ignore);
 	RootComponent = MeshComponent;
@@ -104,6 +102,11 @@ void AStarlightActor::SetTeleportVelocity(const FVector& LinearVelocity, const F
 {
 	MeshComponent->SetPhysicsLinearVelocity(LinearVelocity);
 	MeshComponent->SetPhysicsAngularVelocityInRadians(AngularVelocity);
+}
+
+ECollisionChannel AStarlightActor::GetTeleportableBaseObjectType()
+{
+	return ECC_PhysicsBody;
 }
 
 void AStarlightActor::NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UPrimitiveComponent* OtherComp,

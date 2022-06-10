@@ -81,8 +81,13 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Portal")
 	TObjectPtr<USceneCaptureComponent2D> SceneCaptureComponent;
 
+	/* Objects inside this box can only interact with objects inside either inner or outer boxes */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Portal")
-	TObjectPtr<UBoxComponent> CollisionBoxComponent;
+	TObjectPtr<UBoxComponent> InnerCollisionComponent;
+
+	/* Only objects inside this or inner boxes are able to interact with objects inside inner box */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Portal")
+	TObjectPtr<UBoxComponent> OuterCollisionComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Portal")
 	TObjectPtr<USceneComponent> BackfacingComponent;
@@ -110,25 +115,36 @@ private:
 	TObjectPtr<UTextureRenderTarget2D> RenderTargetRead = nullptr;
 
 	UPROPERTY()
-	TArray<TScriptInterface<ITeleportable>> ActorsInPortalRange;
+	TArray<TScriptInterface<ITeleportable>> ActorsInInnerBox;
 
 	UPROPERTY()
 	TMap<int32, TObjectPtr<ATeleportableCopy>> TeleportableCopies;
 
 	EPortalType PortalType;
+
+	ECollisionChannel InnerCollisionChannel;
 	
 private:
 	UFUNCTION()
-	void OnCollisionBoxStartOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+	void OnInnerBoxStartOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	                                UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
 	                                const FHitResult& SweepResult);
 
 	UFUNCTION()
-	void OnCollisionBoxEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+	void OnInnerBoxEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	                              UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
-	void OnActorBeginOverlap(TObjectPtr<AActor> Actor);
-	void OnActorEndOverlap(TObjectPtr<AActor> Actor);
+	UFUNCTION()
+	void OnOuterBoxStartOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+								UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
+								const FHitResult& SweepResult);
+
+	UFUNCTION()
+	void OnOuterBoxEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+								  UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+	
+	void OnActorBeginInnerOverlap(TObjectPtr<AActor> Actor);
+	void OnActorEndInnerOverlap(TObjectPtr<AActor> Actor);
 
 	void TeleportActor(TObjectPtr<ITeleportable> TeleportingActor);
 

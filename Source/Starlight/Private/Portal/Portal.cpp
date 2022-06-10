@@ -43,16 +43,32 @@ APortal::APortal()
 	SceneCaptureComponent->bEnableClipPlane = true;
 	SceneCaptureComponent->SetupAttachment(RootComponent);
 
-	CollisionBoxComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("CollisionBoxComponent"));
-	CollisionBoxComponent->SetBoxExtent(PortalConstants::BorderCollisionExtent);
-	CollisionBoxComponent->SetRelativeLocation(FVector(PortalConstants::BorderCollisionExtent.X, 0.f, 0.f));
-	CollisionBoxComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	CollisionBoxComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
-	CollisionBoxComponent->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
-	CollisionBoxComponent->SetCollisionResponseToChannel(ECC_PhysicsBody, ECR_Overlap);
-	CollisionBoxComponent->SetGenerateOverlapEvents(true);
-	CollisionBoxComponent->SetupAttachment(RootComponent);
+	InnerCollisionComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("InnerCollisionComponent"));
+	InnerCollisionComponent->SetBoxExtent(PortalConstants::InnerCollisionExtent);
+	InnerCollisionComponent->SetRelativeLocation(FVector(PortalConstants::InnerCollisionExtent.X, 0.f, 0.f));
+	InnerCollisionComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	InnerCollisionComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
+	InnerCollisionComponent->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+	InnerCollisionComponent->SetCollisionResponseToChannel(ECC_PhysicsBody, ECR_Overlap);
+	InnerCollisionComponent->SetCollisionResponseToChannel(ECC_WithinFirstPortal, ECR_Overlap);
+	InnerCollisionComponent->SetCollisionResponseToChannel(ECC_WithinSecondPortal, ECR_Overlap);
+	InnerCollisionComponent->SetCollisionResponseToChannel(ECC_WithinBothPortals, ECR_Overlap);
+	InnerCollisionComponent->SetGenerateOverlapEvents(true);
+	InnerCollisionComponent->SetupAttachment(RootComponent);
 
+	OuterCollisionComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("OuterCollisionComponent"));
+	OuterCollisionComponent->SetBoxExtent(PortalConstants::OuterCollisionExtent);
+	OuterCollisionComponent->SetRelativeLocation(FVector(PortalConstants::OuterCollisionExtent.X, 0.f, 0.f));
+	OuterCollisionComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	OuterCollisionComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
+	OuterCollisionComponent->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+	OuterCollisionComponent->SetCollisionResponseToChannel(ECC_PhysicsBody, ECR_Overlap);
+	OuterCollisionComponent->SetCollisionResponseToChannel(ECC_WithinFirstPortal, ECR_Overlap);
+	OuterCollisionComponent->SetCollisionResponseToChannel(ECC_WithinSecondPortal, ECR_Overlap);
+	OuterCollisionComponent->SetCollisionResponseToChannel(ECC_WithinBothPortals, ECR_Overlap);
+	OuterCollisionComponent->SetGenerateOverlapEvents(true);
+	OuterCollisionComponent->SetupAttachment(RootComponent);
+	
 	BackfacingComponent = CreateDefaultSubobject<USceneComponent>(TEXT("BackFacingComponent"));
 	BackfacingComponent->SetRelativeRotation(FRotator(0.f, 180.f, 0.f));
 	BackfacingComponent->SetupAttachment(RootComponent);
@@ -64,11 +80,11 @@ void APortal::Tick(float DeltaSeconds)
 
 	if (OtherPortal)
 	{
-		if (ActorsInPortalRange.Num() > 0)
+		if (ActorsInInnerBox.Num() > 0)
 		{
-			const FVector PortalNormal = GetActorRotation().Vector();
+			const FVector PortalNormal = GetActorForwardVector();
 			TArray<ITeleportable*> TeleportingActors;
-			for (TScriptInterface<ITeleportable> ScriptInterface : ActorsInPortalRange)
+			for (TScriptInterface<ITeleportable> ScriptInterface : ActorsInInnerBox)
 			{
 				ITeleportable* Teleportable = ScriptInterface.GetInterface();
 				if (ShouldTeleportActor(Teleportable, PortalNormal))
@@ -137,6 +153,8 @@ void APortal::Initialize(const TObjectPtr<APortalSurface> Surface, FVector InLoc
 	Extents = InExtents;
 	OtherPortal = InOtherPortal;
 
+	InnerCollisionChannel = InPortalType == EPortalType::First ? ECC_WithinFirstPortal : ECC_WithinSecondPortal;
+	
 	// hide attached surface's mesh when capturing scene so it doesn't occlude the view
 	if (UPrimitiveComponent* SurfaceCollisionComp = PortalSurface->GetAttachedSurfaceComponent())
 	{
@@ -209,7 +227,7 @@ void APortal::SetConnectedPortal(TObjectPtr<APortal> Portal)
 	
 	if (!OtherPortal)
 	{
-		for (TScriptInterface<ITeleportable> Teleportable : ActorsInPortalRange)
+		for (TScriptInterface<ITeleportable> Teleportable : ActorsInInnerBox)
 		{
 			Teleportable->OnOverlapWithPortalBegin(this);
 		}
@@ -290,38 +308,59 @@ void APortal::BeginPlay()
 
 	DynamicInstance = UMaterialInstanceDynamic::Create(PortalMesh->GetMaterial(0), this);
 
-	CollisionBoxComponent->OnComponentBeginOverlap.AddDynamic(this, &APortal::OnCollisionBoxStartOverlap);
-	CollisionBoxComponent->OnComponentEndOverlap.AddDynamic(this, &APortal::OnCollisionBoxEndOverlap);
+	InnerCollisionComponent->OnComponentBeginOverlap.AddDynamic(this, &APortal::OnInnerBoxStartOverlap);
+	InnerCollisionComponent->OnComponentEndOverlap.AddDynamic(this, &APortal::OnInnerBoxEndOverlap);
+
+	OuterCollisionComponent->OnComponentBeginOverlap.AddDynamic(this, &APortal::OnOuterBoxStartOverlap);
+	OuterCollisionComponent->OnComponentEndOverlap.AddDynamic(this, &APortal::OnOuterBoxEndOverlap);
 }
 
-void APortal::OnCollisionBoxStartOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+void APortal::OnInnerBoxStartOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
                                          UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
                                          const FHitResult& SweepResult)
 {
-	OnActorBeginOverlap(OtherActor);
+	OnActorBeginInnerOverlap(OtherActor);
 }
 
-void APortal::OnCollisionBoxEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+void APortal::OnInnerBoxEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
                                        UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	OnActorEndOverlap(OtherActor);
+	OnActorEndInnerOverlap(OtherActor);
 }
 
-void APortal::OnActorBeginOverlap(TObjectPtr<AActor> Actor)
+void APortal::OnOuterBoxStartOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	OtherComp->SetCollisionResponseToChannel(InnerCollisionChannel, ECR_Block);
+	OtherComp->SetCollisionResponseToChannel(ECC_WithinBothPortals, ECR_Block);
+}
+
+void APortal::OnOuterBoxEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	OtherComp->SetCollisionResponseToChannel(InnerCollisionChannel, ECR_Ignore);
+	ECollisionChannel OtherInnerCollisionChannel = InnerCollisionChannel == ECC_WithinFirstPortal ? ECC_WithinSecondPortal : ECC_WithinFirstPortal;
+	if (OtherComp->GetCollisionResponseToChannel(OtherInnerCollisionChannel) == ECR_Ignore)
+	{
+		OtherComp->SetCollisionResponseToChannel(ECC_WithinBothPortals, ECR_Ignore);
+	}
+}
+
+void APortal::OnActorBeginInnerOverlap(TObjectPtr<AActor> Actor)
 {
 	if (ITeleportable* TeleportableActor = Cast<ITeleportable>(Actor);
-		TeleportableActor && !ActorsInPortalRange.Contains(TeleportableActor))
+		TeleportableActor && !ActorsInInnerBox.Contains(TeleportableActor))
 	{
 		if (OtherPortal)
 		{
 			TeleportableActor->OnOverlapWithPortalBegin(this);
 			CreateTeleportableCopy(TeleportableActor);
 		}
-		ActorsInPortalRange.Add(TeleportableActor->GetTeleportableScriptInterface());
+		ActorsInInnerBox.Add(TeleportableActor->GetTeleportableScriptInterface());
 	}
 }
 
-void APortal::OnActorEndOverlap(TObjectPtr<AActor> Actor)
+void APortal::OnActorEndInnerOverlap(TObjectPtr<AActor> Actor)
 {
 	if (ITeleportable* TeleportableActor = Cast<ITeleportable>(Actor))
 	{
@@ -330,7 +369,7 @@ void APortal::OnActorEndOverlap(TObjectPtr<AActor> Actor)
 			TeleportableActor->OnOverlapWithPortalEnd(this);
 			DeleteTeleportableCopy(Actor->GetUniqueID());
 		}
-		ActorsInPortalRange.Remove(TeleportableActor->GetTeleportableScriptInterface());
+		ActorsInInnerBox.Remove(TeleportableActor->GetTeleportableScriptInterface());
 	}
 }
 

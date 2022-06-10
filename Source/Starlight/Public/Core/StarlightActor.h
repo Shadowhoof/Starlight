@@ -46,6 +46,8 @@ public:
 	virtual void GetTeleportVelocity(FVector& LinearVelocity, FVector& AngularVelocity) const override;
 	virtual void SetTeleportVelocity(const FVector& LinearVelocity, const FVector& AngularVelocity) override;
 
+	virtual ECollisionChannel GetTeleportableBaseObjectType() override;
+
 	// Teleportable interface end
 	
 	virtual void NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UPrimitiveComponent* OtherComp, bool bSelfMoved,

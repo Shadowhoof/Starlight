@@ -97,11 +97,18 @@ TObjectPtr<const AActor> ITeleportable::CastToTeleportableActor() const
 
 void ITeleportable::OnOverlapWithPortalBegin(TObjectPtr<APortal> Portal)
 {
+	UPrimitiveComponent* CollisionComponent = GetCollisionComponent();
+	
+	ECollisionChannel NewObjectType = UPortalStatics::GetObjectTypeOnOverlapBegin(this, Portal->GetPortalType());
+	UE_LOG(LogPortal, VeryVerbose, TEXT("Portal %s overlap begin | Setting object type of %s to %s"), *Portal->GetName(),
+							*CastToTeleportableActor()->GetName(), *UEnum::GetValueAsName(NewObjectType).ToString())
+	CollisionComponent->SetCollisionObjectType(NewObjectType);
+	
 	UE_LOG(LogPortal, Verbose, TEXT("Portal %s is now overlapping with %s"), *Portal->GetName(), *CastToTeleportableActor()->GetName());
 	DisableCollisionWith(Portal->GetPortalSurface());
 
 	const ECollisionChannel ObjectTypeToBlock = UPortalStatics::GetOpposingCopyObjectType(Portal->GetPortalType());
-	GetCollisionComponent()->SetCollisionResponseToChannel(ObjectTypeToBlock, ECR_Block);
+	CollisionComponent->SetCollisionResponseToChannel(ObjectTypeToBlock, ECR_Block);
 }
 
 void ITeleportable::OnOverlapWithPortalEnd(TObjectPtr<APortal> Portal)
@@ -110,7 +117,12 @@ void ITeleportable::OnOverlapWithPortalEnd(TObjectPtr<APortal> Portal)
 	EnableCollisionWith(Portal->GetPortalSurface());
 
 	const ECollisionChannel ObjectTypeToIgnore = UPortalStatics::GetOpposingCopyObjectType(Portal->GetPortalType());
-	GetCollisionComponent()->SetCollisionResponseToChannel(ObjectTypeToIgnore, ECR_Ignore);
+	UPrimitiveComponent* CollisionComponent = GetCollisionComponent();
+	CollisionComponent->SetCollisionResponseToChannel(ObjectTypeToIgnore, ECR_Ignore);
+
+	ECollisionChannel NewObjectType = UPortalStatics::GetObjectTypeOnOverlapEnd(this, Portal->GetPortalType());
+	UE_LOG(LogPortal, VeryVerbose, TEXT("Portal %s overlap end | Setting object type of %s to %s"), *Portal->GetName(), *CastToTeleportableActor()->GetName(), *UEnum::GetValueAsName(NewObjectType).ToString())
+	CollisionComponent->SetCollisionObjectType(NewObjectType);
 }
 
 TScriptInterface<ITeleportable> ITeleportable::GetTeleportableScriptInterface()
@@ -136,6 +148,12 @@ void ITeleportable::SetTeleportVelocity(const FVector& LinearVelocity, const FVe
 
 void ITeleportable::OnTeleportableMoved()
 {
+}
+
+ECollisionChannel ITeleportable::GetTeleportableBaseObjectType()
+{
+	UE_LOG(LogPortal, Error, TEXT("ITeleportable::GetBaseObjectType is not implemented for %s"), *CastToTeleportableActor()->GetClass()->GetName());
+	return ECC_PhysicsBody;
 }
 
 TObjectPtr<ATeleportableCopy> ITeleportable::CreatePortalCopy(const FTransform& SpawnTransform,

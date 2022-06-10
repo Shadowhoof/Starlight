@@ -255,7 +255,7 @@ bool UTraceGrabDevice::ShouldKeepHoldingObject() const
 	const FVector ToFirstPointDir = (TransformedPointMap[0].Key - StartPoint).GetSafeNormal();
 	if (ToFirstPointDir.Dot(OwnerComponent->GetComponentRotation().Vector()) < TraceGrabConstants::MinHoldDotProduct)
 	{
-		UE_LOG(LogGrab, VeryVerbose, TEXT("Not facing grabbed object, dot: %.2f, dropping"),
+		UE_LOG(LogGrab, Verbose, TEXT("Not facing grabbed object, dot: %.2f, dropping"),
 		       ToFirstPointDir.Dot(OwnerComponent->GetComponentRotation().Vector()));
 		return false;
 	}
@@ -271,7 +271,7 @@ bool UTraceGrabDevice::ShouldKeepHoldingObject() const
 			DistanceToObject += FVector::Distance(StartPoint, HitResult.Location);
 			if (HitResult.GetActor() != Portal)
 			{
-				UE_LOG(LogGrab, VeryVerbose, TEXT("Object %s is blocking the view to grabbed object, dropping"), *HitResult.GetActor()->GetName())
+				UE_LOG(LogGrab, Verbose, TEXT("Object %s is blocking the view to grabbed object, dropping"), *HitResult.GetActor()->GetName())
 				return false;
 			}
 
@@ -287,7 +287,7 @@ bool UTraceGrabDevice::ShouldKeepHoldingObject() const
 
 	if (DistanceToObject > TraceGrabConstants::MaxHoldDistance)
 	{
-		UE_LOG(LogGrab, VeryVerbose, TEXT("Grabbed object is too far away, distance: %.2f, dropping"),
+		UE_LOG(LogGrab, Verbose, TEXT("Grabbed object is too far away, distance: %.2f, dropping"),
 		       DistanceToObject);
 		return false;
 	}

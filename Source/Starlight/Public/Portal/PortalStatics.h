@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
 #include "PortalConstants.h"
+#include "Teleportable.h"
 #include "Core/StarlightConstants.h"
 #include "PortalStatics.generated.h"
 
@@ -84,4 +85,10 @@ public:
 	 * with portal of opposing type to the one provided.  
 	 */
 	static ECollisionChannel GetOpposingCopyObjectType(EPortalType PortalType);
+
+	/* Returns object type appropriate for a teleportable object of provided type when it begins overlapping with a particular portal type. */
+	static ECollisionChannel GetObjectTypeOnOverlapBegin(TObjectPtr<ITeleportable> Teleportable, EPortalType PortalType);
+
+	/* Returns object type appropriate for a teleportable object of provided type when it stops overlapping with a particular portal type. */
+	static ECollisionChannel GetObjectTypeOnOverlapEnd(TObjectPtr<ITeleportable> Teleportable, EPortalType PortalType);
 };

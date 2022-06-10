@@ -127,3 +127,30 @@ ECollisionChannel UPortalStatics::GetOpposingCopyObjectType(EPortalType PortalTy
 {
 	return PortalType == EPortalType::First ? ECC_SecondPortalCopy : ECC_FirstPortalCopy;
 }
+
+inline ECollisionChannel GetInnerObjectTypeForPortalType(EPortalType PortalType)
+{
+	return PortalType == EPortalType::First ? ECC_WithinFirstPortal : ECC_SecondPortalCopy;
+}
+
+ECollisionChannel UPortalStatics::GetObjectTypeOnOverlapBegin(TObjectPtr<ITeleportable> Teleportable, EPortalType PortalType)
+{
+	ECollisionChannel CurrentObjectType = Teleportable->GetCollisionComponent()->GetCollisionObjectType();
+	if (PortalType == EPortalType::First)
+	{
+		return CurrentObjectType == ECC_WithinSecondPortal ? ECC_WithinBothPortals : ECC_WithinFirstPortal;
+	}
+	
+	return CurrentObjectType == ECC_WithinFirstPortal ? ECC_WithinBothPortals : ECC_WithinSecondPortal;
+}
+
+ECollisionChannel UPortalStatics::GetObjectTypeOnOverlapEnd(TObjectPtr<ITeleportable> Teleportable, EPortalType PortalType)
+{
+	ECollisionChannel CurrentObjectType = Teleportable->GetCollisionComponent()->GetCollisionObjectType();
+	if (CurrentObjectType == ECC_WithinBothPortals)
+	{
+		return PortalType == EPortalType::First ? ECC_WithinSecondPortal : ECC_WithinFirstPortal;
+	}
+
+	return Teleportable->GetTeleportableBaseObjectType();
+}
