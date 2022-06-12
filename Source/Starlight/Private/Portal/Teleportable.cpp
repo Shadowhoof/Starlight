@@ -31,7 +31,9 @@ void ITeleportable::Teleport(TObjectPtr<APortal> SourcePortal, TObjectPtr<APorta
 		IgnoredActors.Add(Copy);
 	}
 	
-	const bool bIsEncroaching = UStarlightStatics::ComponentEncroachesBlockingGeometry(AsActor, GetCollisionComponent(), NewLocation, NewRotation, IgnoredActors, Adjustment);
+	const ECollisionChannel ObjectTypeToCheck = UPortalStatics::GetInnerObjectTypeForPortalType(TargetPortal->GetPortalType());
+	const bool bIsEncroaching = UPortalStatics::ComponentEncroachesBlockingGeometryOnTeleport(AsActor, GetCollisionComponent(),
+		NewLocation, NewRotation, IgnoredActors, Adjustment, TargetPortal, ObjectTypeToCheck);
 	if (bIsEncroaching)
 	{
 		UE_LOG(LogPortal, Verbose, TEXT("%s is encroaching into other objects during teleport, making adjustment to push it out: %s"),

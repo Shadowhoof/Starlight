@@ -16,3 +16,5 @@
 #define ECC_WithinSecondPortal ECC_GameTraceChannel7
 /* Object type of teleportable objects inside both first and second portals' inner collision boxes */
 #define ECC_WithinBothPortals ECC_GameTraceChannel8
+
+const TSet TeleportingCopyTypes = {ECC_FirstPortalCopy, ECC_SecondPortalCopy}; 

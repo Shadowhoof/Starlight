@@ -86,9 +86,34 @@ public:
 	 */
 	static ECollisionChannel GetOpposingCopyObjectType(EPortalType PortalType);
 
+	/**
+	 * Returns object type that a teleportable object would get on overlap with this portal type. Does not take into
+	 * account if object is already overlapping with another portal.
+	 */
+	static ECollisionChannel GetInnerObjectTypeForPortalType(EPortalType PortalType);
+	
 	/* Returns object type appropriate for a teleportable object of provided type when it begins overlapping with a particular portal type. */
 	static ECollisionChannel GetObjectTypeOnOverlapBegin(TObjectPtr<ITeleportable> Teleportable, EPortalType PortalType);
 
 	/* Returns object type appropriate for a teleportable object of provided type when it stops overlapping with a particular portal type. */
 	static ECollisionChannel GetObjectTypeOnOverlapEnd(TObjectPtr<ITeleportable> Teleportable, EPortalType PortalType);
+
+	/**
+	 * @brief Checks whether component will be inside blocking geometry at provided location and rotation. Calculates
+	 * potential adjustment vector that will displace component from blocking collision.
+	 * @see ComponentEncroachesBlockingGeometry_WithAdjustment
+	 * @param Actor Owner of the component
+	 * @param Component Component to check
+	 * @param Location Location at which to check
+	 * @param Rotation Component rotation to check
+	 * @param IgnoredActors Actors to ignore during collision check
+	 * @param Adjustment Proposed adjustment that will allow component to stay out of blocking geometry
+	 * @param TargetPortal Destination portal
+	 * @param ObjectType Object type to check collision against. If ECC_MAX is passed then object's current type will
+	 * be used. ECC_MAX is the default value.
+	 * @return Is component inside blocking geometry
+	 */
+	static bool ComponentEncroachesBlockingGeometryOnTeleport(TObjectPtr<AActor> Actor, TObjectPtr<UPrimitiveComponent> Component, const FVector& Location,
+													const FRotator& Rotation, const TArray<TObjectPtr<AActor>>& IgnoredActors,
+													FVector& Adjustment, TObjectPtr<APortal> TargetPortal, ECollisionChannel ObjectType = ECC_MAX);
 };
