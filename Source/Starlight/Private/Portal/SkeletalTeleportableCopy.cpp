@@ -38,3 +38,8 @@ void ASkeletalTeleportableCopy::Initialize(TObjectPtr<ITeleportable> InParent, T
 	CreateDynamicInstances(SkeletalMeshComponent);
 }
 
+bool ASkeletalTeleportableCopy::IsHiddenInPortal() const
+{
+	return true;
+}
+

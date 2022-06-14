@@ -42,6 +42,11 @@ TWeakObjectPtr<APortal> ATeleportableCopy::GetOwnerPortal() const
 	return OwnerPortal;
 }
 
+bool ATeleportableCopy::IsHiddenInPortal() const
+{
+	return false;
+}
+
 void ATeleportableCopy::DisableCollisionWithPortal(TObjectPtr<UPrimitiveComponent> CollisionComponent)
 {
 	TArray<TObjectPtr<UPrimitiveComponent>> SurfaceCollisionComponents;

@@ -407,6 +407,10 @@ void APortal::CreateTeleportableCopy(TObjectPtr<ITeleportable> TeleportingActor)
 	if (Copy)
 	{
 		TeleportableCopies.Add(ParentActor->GetUniqueID(), Copy);
+		if (Copy->IsHiddenInPortal())
+		{
+			OtherPortal->SceneCaptureComponent->HideActorComponents(Copy);
+		}
 		Copy->UpdateCullingParams(OtherPortal->GetActorLocation(), OtherPortal->GetActorForwardVector());
 	}
 }

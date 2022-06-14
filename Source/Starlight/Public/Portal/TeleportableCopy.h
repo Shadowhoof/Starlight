@@ -37,6 +37,8 @@ public:
 	virtual void ResetVelocity();
 
 	TWeakObjectPtr<APortal> GetOwnerPortal() const;
+
+	virtual bool IsHiddenInPortal() const;
 	
 protected:
 

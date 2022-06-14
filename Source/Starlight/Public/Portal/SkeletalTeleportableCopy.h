@@ -20,6 +20,8 @@ public:
 
 	virtual void Initialize(TObjectPtr<ITeleportable> InParent, TObjectPtr<APortal> InOwnerPortal) override;
 
+	virtual bool IsHiddenInPortal() const override;
+	
 protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
