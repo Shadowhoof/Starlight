@@ -280,6 +280,12 @@ bool UTraceGrabDevice::ShouldKeepHoldingObject() const
 		}
 		else
 		{
+			if (Portal)
+			{
+				UE_LOG(LogGrab, Verbose, TEXT("Trace to object failed to collide with portal when it was supposed to, dropping"));
+				return false;
+			}
+			
 			DistanceToObject += FVector::Distance(StartPoint, Point);
 			break;
 		}

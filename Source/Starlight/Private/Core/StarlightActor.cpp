@@ -36,6 +36,7 @@ void AStarlightActor::OnGrab()
 void AStarlightActor::OnRelease()
 {
 	IGrabbable::OnRelease();
+	MeshComponent->SetPhysicsLinearVelocity(MeshComponent->GetPhysicsLinearVelocity() * GrabConstants::ReleaseLinearVelocityMultiplier);
 	bIsGrabbed = false;
 }
 

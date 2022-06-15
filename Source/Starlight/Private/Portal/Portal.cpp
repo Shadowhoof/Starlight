@@ -35,7 +35,10 @@ APortal::APortal()
 	RootComponent = PortalMesh;
 
 	BorderMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BorderMesh"));
-	BorderMesh->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+	BorderMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	BorderMesh->SetCollisionResponseToChannel(ECC_WithinFirstPortal, ECR_Block);
+	BorderMesh->SetCollisionResponseToChannel(ECC_WithinSecondPortal, ECR_Block);
+	BorderMesh->SetCollisionResponseToChannel(ECC_WithinBothPortals, ECR_Block);
 	BorderMesh->SetupAttachment(RootComponent);
 
 	SceneCaptureComponent = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("SceneCaptureComponent"));
