@@ -39,6 +39,7 @@ APortal::APortal()
 	BorderMesh->SetCollisionResponseToChannel(ECC_WithinFirstPortal, ECR_Block);
 	BorderMesh->SetCollisionResponseToChannel(ECC_WithinSecondPortal, ECR_Block);
 	BorderMesh->SetCollisionResponseToChannel(ECC_WithinBothPortals, ECR_Block);
+	BorderMesh->SetCollisionResponseToChannel(ECC_Portal, ECR_Ignore);
 	BorderMesh->SetupAttachment(RootComponent);
 
 	SceneCaptureComponent = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("SceneCaptureComponent"));
