@@ -13,5 +13,11 @@ class STARLIGHT_API AStarlightController : public APlayerController
 public:
 
 	AStarlightController();
+
+	virtual void Tick(float DeltaSeconds) override;
+
+private:
+
+	float GetUpdatedAngle(const float DeltaSeconds, float InitialAngle, const float UpdateRate) const;
 	
 };

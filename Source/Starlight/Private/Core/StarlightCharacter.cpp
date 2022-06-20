@@ -17,8 +17,7 @@
 
 namespace Constants
 {
-	const float RollUpdateRate = 360.f;		/* Roll change per second if it's different from 0.0 */
-	const float PitchUpdateRate = 360.f;	/* Pitch change per second for actor if it's different from 0.0 */
+	const float RotationDuration = 0.5f;
 }
 
 
@@ -235,7 +234,10 @@ void AStarlightCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	UpdateRotation(DeltaSeconds);
+	if (bIsPostTeleportRotation)
+	{
+		IntepolateRotation(DeltaSeconds);
+	}
 
 	for (const auto& Entry : GrabDevices)
 	{
@@ -245,9 +247,15 @@ void AStarlightCharacter::Tick(float DeltaSeconds)
 
 void AStarlightCharacter::Teleport(TObjectPtr<APortal> SourcePortal, TObjectPtr<APortal> TargetPortal)
 {
-	const FRotator NewControlRotation = SourcePortal->TeleportRotation(GetControlRotation());
+	const FQuat NewControlRotation = SourcePortal->TeleportRotation(GetControlRotation().Quaternion());
 	ITeleportable::Teleport(SourcePortal, TargetPortal);
-	GetController()->SetControlRotation(NewControlRotation);
+	
+	bUseControllerRotationYaw = false;
+	PostTeleportInitialQuat = GetActorQuat();
+	PostTeleportRotationProgress = 0.f;
+	bIsPostTeleportRotation = true;
+	
+	GetController()->SetControlRotation(NewControlRotation.Rotator());
 }
 
 void AStarlightCharacter::OnOverlapWithPortalBegin(TObjectPtr<APortal> Portal)
@@ -295,29 +303,23 @@ void AStarlightCharacter::OnMovement(float DeltaSeconds, FVector OldLocation, FV
 	OnTeleportableMoved();
 }
 
-void AStarlightCharacter::UpdateRotation(const float DeltaSeconds)
+void AStarlightCharacter::IntepolateRotation(const float DeltaSeconds)
 {
-	FRotator ActorRotation = GetActorRotation();
-	if (!FMath::IsNearlyZero(ActorRotation.Pitch) || !FMath::IsNearlyZero(ActorRotation.Roll))
+	const FRotator DesiredRotation = FRotator(0.f, GetControlRotation().Yaw, 0.f);
+	if constexpr (Constants::RotationDuration == 0.f)
 	{
-		ActorRotation.Pitch = GetUpdatedAngle(DeltaSeconds, ActorRotation.Pitch, Constants::PitchUpdateRate);
-		ActorRotation.Roll = GetUpdatedAngle(DeltaSeconds, ActorRotation.Roll, Constants::RollUpdateRate);
-		SetActorRotation(ActorRotation);
+		SetActorRotation(DesiredRotation);
+		return;
 	}
 
-	FRotator ControlRotation = GetControlRotation();
-	if (!FMath::IsNearlyZero(ControlRotation.Roll))
-	{
-		ControlRotation.Roll = GetUpdatedAngle(DeltaSeconds, ControlRotation.Roll, Constants::RollUpdateRate);
-		GetController()->SetControlRotation(ControlRotation);
-	}
-}
+	const float DeltaProgress = 1.0 / Constants::RotationDuration * DeltaSeconds;
+	PostTeleportRotationProgress = FMath::Min(PostTeleportRotationProgress + DeltaProgress, 1.f);
+	const FQuat InterpolatedQuat = FQuat::Slerp(PostTeleportInitialQuat, DesiredRotation.Quaternion(), PostTeleportRotationProgress);
+	SetActorRotation(InterpolatedQuat);
 
-float AStarlightCharacter::GetUpdatedAngle(const float DeltaSeconds, float InitialAngle, const float UpdateRate)
-{
-	InitialAngle = FRotator::NormalizeAxis(InitialAngle);
-	const float DeltaAngle = DeltaSeconds * Constants::RollUpdateRate;
-	return InitialAngle > 0.f
-		       ? FMath::Max(InitialAngle - DeltaAngle, 0.f)
-		       : FMath::Min(InitialAngle + DeltaAngle, 0.f);
+	if (PostTeleportRotationProgress >= 1.f)
+	{
+		bIsPostTeleportRotation = false;
+		bUseControllerRotationYaw = true;
+	}
 }

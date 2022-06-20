@@ -113,6 +113,10 @@ private:
 	UPROPERTY()
 	TArray<TObjectPtr<APortal>> OverlappingPortals;
 
+	FQuat PostTeleportInitialQuat;
+	float PostTeleportRotationProgress = 0.f;
+	bool bIsPostTeleportRotation = false;
+
 private:
 	void LookUp(const float Rate);
 	void LookRight(const float Rate);
@@ -129,6 +133,5 @@ private:
 	UFUNCTION()
 	void OnMovement(float DeltaSeconds, FVector OldLocation, FVector OldVelocity);
 
-	void UpdateRotation(const float DeltaSeconds);
-	float GetUpdatedAngle(const float DeltaSeconds, float InitialAngle, const float UpdateRate);
+	void IntepolateRotation(const float DeltaSeconds);
 };
