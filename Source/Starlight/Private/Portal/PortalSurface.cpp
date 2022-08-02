@@ -3,7 +3,7 @@
 
 #include "Portal/PortalSurface.h"
 
-#include "Components/CapsuleComponent.h"
+#include "Components/ArrowComponent.h"
 #include "Portal/PortalConstants.h"
 
 
@@ -13,6 +13,10 @@ APortalSurface::APortalSurface()
 	StaticMeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	StaticMeshComponent->SetCollisionResponseToAllChannels(ECR_Block);
 	RootComponent = StaticMeshComponent;
+
+	ArrowComponent = CreateDefaultSubobject<UArrowComponent>(TEXT("ArrowComponent"));
+	ArrowComponent->SetRelativeRotation(FRotator(90.f, 0.f, 0.f));
+	ArrowComponent->SetupAttachment(RootComponent);
 }
 
 bool APortalSurface::CanFitPortal() const
@@ -29,11 +33,12 @@ bool APortalSurface::GetPortalLocation(const FHitResult& HitResult, FVector& Out
 	}
 
 	const FTransform Transform = GetActorTransform();
+	OutLocalCoords = bPortalOnlyInCenter ? FVector::ZeroVector : Transform.InverseTransformPositionNoScale(HitResult.Location);
+
 	if (bFixedOrientation)
 	{
 		const float YLimit = Extents.Y - PortalConstants::HalfSize.Y;
 		const float ZLimit = Extents.Z - PortalConstants::HalfSize.Z;
-		OutLocalCoords = Transform.InverseTransformPositionNoScale(HitResult.Location);
 		OutLocalCoords.Y = FMath::Clamp(OutLocalCoords.Y, -YLimit, YLimit);
 		OutLocalCoords.Z = FMath::Clamp(OutLocalCoords.Z, -ZLimit, ZLimit);
 
@@ -60,7 +65,6 @@ bool APortalSurface::GetPortalLocation(const FHitResult& HitResult, FVector& Out
 
 		const float YLimit = Extents.Y - YExtent;
 		const float ZLimit = Extents.Z - ZExtent;
-		OutLocalCoords = Transform.InverseTransformPositionNoScale(HitResult.Location);
 		OutLocalCoords.Y = FMath::Clamp(OutLocalCoords.Y, -YLimit, YLimit);
 		OutLocalCoords.Z = FMath::Clamp(OutLocalCoords.Z, -ZLimit, ZLimit);
 

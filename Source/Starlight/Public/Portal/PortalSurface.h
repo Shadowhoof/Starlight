@@ -6,6 +6,8 @@
 #include "GameFramework/Actor.h"
 #include "PortalSurface.generated.h"
 
+class UArrowComponent;
+
 UCLASS()
 class STARLIGHT_API APortalSurface : public AActor
 {
@@ -37,6 +39,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "StaticMesh")
 	TObjectPtr<UStaticMeshComponent> StaticMeshComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UArrowComponent> ArrowComponent;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Portal")
 	TObjectPtr<AActor> AttachedSurface;
 
@@ -46,6 +51,11 @@ protected:
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Portal")
 	bool bFixedOrientation = true;
+
+	/** Indicates whether portal can only be placed in the center of the surface. Hitting any point of the surface with
+	 * the portal gun will try to place the portal in the center. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Portal")
+	bool bPortalOnlyInCenter = false;
 	
 	FVector Size;
 	FVector Extents;
