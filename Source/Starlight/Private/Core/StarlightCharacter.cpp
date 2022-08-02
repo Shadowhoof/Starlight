@@ -4,7 +4,10 @@
 #include "MotionControllerComponent.h"
 #include "Camera/CameraComponent.h"
 #include "IXRTrackingSystem.h"
+#include "Components/SphereComponent.h"
+#include "Core/StarlightConstants.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Grab/Grabbable.h"
 #include "Grab/MotionControllerGrabDevice.h"
 #include "Grab/TraceGrabDevice.h"
 #include "Movement/TeleportComponent.h"
@@ -40,10 +43,20 @@ AStarlightCharacter::AStarlightCharacter()
 
 	TeleportComponent = CreateDefaultSubobject<UTeleportComponent>(TEXT("TeleportComponent"));
 	PortalComponent = CreateDefaultSubobject<UPortalComponent>(TEXT("PortalComponent"));
-
-	PortalCopyClass = ASkeletalTeleportableCopy::StaticClass();
 	
-	GetMesh()->bOwnerNoSee = true;
+	HeldObjectCollisionComponent = CreateDefaultSubobject<USphereComponent>(TEXT("HeldObjectCollisionComponent"));
+	HeldObjectCollisionComponent->SetSphereRadius(GetCapsuleComponent()->GetScaledCapsuleRadius());
+	HeldObjectCollisionComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
+	HeldObjectCollisionComponent->SetCollisionResponseToChannel(ECC_PhysicsBody, ECR_Block);
+	HeldObjectCollisionComponent->SetCollisionResponseToChannel(ECC_WithinFirstPortal, ECR_Block);
+	HeldObjectCollisionComponent->SetCollisionResponseToChannel(ECC_WithinSecondPortal, ECR_Block);
+	HeldObjectCollisionComponent->SetCollisionResponseToChannel(ECC_WithinBothPortals, ECR_Block);
+	
+	PortalCopyClass = ASkeletalTeleportableCopy::StaticClass();
+
+	USkeletalMeshComponent* SkeletalMesh = GetMesh();
+	SkeletalMesh->bOwnerNoSee = true;
+	SkeletalMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
 void AStarlightCharacter::BeginPlay()
@@ -243,6 +256,30 @@ void AStarlightCharacter::Tick(float DeltaSeconds)
 	{
 		Entry.Value->Tick(DeltaSeconds);
 	}
+}
+
+void AStarlightCharacter::OnObjectGrabbed(TObjectPtr<IGrabbable> Grabbable)
+{
+	UCapsuleComponent* CapsuleComp = GetCapsuleComponent();
+	UPrimitiveComponent* GrabbedComponent = Grabbable->GetComponentToGrab();
+	
+	CapsuleComp->IgnoreComponentWhenMoving(GrabbedComponent, true);
+	GrabbedComponent->IgnoreComponentWhenMoving(CapsuleComp, true);
+
+	HeldObjectCollisionComponent->IgnoreComponentWhenMoving(GrabbedComponent, false);
+	GrabbedComponent->IgnoreComponentWhenMoving(HeldObjectCollisionComponent, false);
+}
+
+void AStarlightCharacter::OnObjectReleased(TObjectPtr<IGrabbable> Grabbable)
+{
+	UCapsuleComponent* CapsuleComp = GetCapsuleComponent();
+	UPrimitiveComponent* GrabbedComponent = Grabbable->GetComponentToGrab();
+	
+	CapsuleComp->IgnoreComponentWhenMoving(GrabbedComponent, false);
+	GrabbedComponent->IgnoreComponentWhenMoving(CapsuleComp, false);
+	
+	HeldObjectCollisionComponent->IgnoreComponentWhenMoving(GrabbedComponent, true);
+	GrabbedComponent->IgnoreComponentWhenMoving(HeldObjectCollisionComponent, true);
 }
 
 void AStarlightCharacter::Teleport(TObjectPtr<APortal> SourcePortal, TObjectPtr<APortal> TargetPortal)

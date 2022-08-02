@@ -3,6 +3,7 @@
 
 #include "Grab/GrabDevice.h"
 
+#include "Core/StarlightCharacter.h"
 #include "Grab/Grabbable.h"
 #include "Statics/StarlightMacros.h"
 
@@ -15,6 +16,7 @@ void UGrabDevice::Initialize(TObjectPtr<USceneComponent> InOwnerComponent)
 	}
 	
 	OwnerComponent = InOwnerComponent;
+	PlayerCharacter = Cast<AStarlightCharacter>(InOwnerComponent->GetOwner());
 }
 
 TObjectPtr<IGrabbable> UGrabDevice::GetGrabbedObject() const
@@ -45,11 +47,13 @@ void UGrabDevice::OnSuccessfulGrab(TObjectPtr<IGrabbable> ObjectToGrab)
 	ensure(ObjectToGrab && !GrabbedObject);
 	ObjectToGrab->OnGrab();
 	GrabbedObject = ObjectToGrab->GetGrabbableScriptInterface();
+	PlayerCharacter->OnObjectGrabbed(ObjectToGrab);
 }
 
 void UGrabDevice::OnSuccessfulRelease()
 {
 	ensure(GrabbedObject);
+	PlayerCharacter->OnObjectReleased(GrabbedObject.GetInterface());
 	GrabbedObject->OnRelease();
 	GrabbedObject = nullptr;
 }

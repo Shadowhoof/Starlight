@@ -6,6 +6,7 @@
 #include "GrabDevice.generated.h"
 
 
+class AStarlightCharacter;
 class IGrabbable;
 
 UCLASS(Abstract)
@@ -30,6 +31,9 @@ public:
 	
 protected:
 
+	UPROPERTY(Transient)
+	TObjectPtr<AStarlightCharacter> PlayerCharacter;
+	
 	UPROPERTY()
 	TScriptInterface<IGrabbable> GrabbedObject;
 

@@ -84,7 +84,6 @@ bool UTraceGrabDevice::TryGrabbing()
 void UTraceGrabDevice::Initialize(TObjectPtr<USceneComponent> InOwnerComponent)
 {
 	Super::Initialize(InOwnerComponent);
-	PlayerCharacter = Cast<AStarlightCharacter>(InOwnerComponent->GetOwner());
 
 	AStarlightGameMode* GameMode = GetWorld()->GetAuthGameMode<AStarlightGameMode>();
 	if (GameMode)
@@ -133,7 +132,8 @@ void UTraceGrabDevice::Tick(const float DeltaSeconds)
 	UPrimitiveComponent* GrabbedComponent = GrabbedObject->GetComponentToGrab();
 	const FVector GrabbedComponentLocation = GrabbedComponent->GetComponentLocation(); 
 	const FVector ToDesiredLocation = GetDesiredGrabbedObjectLocation() - GrabbedComponentLocation;
-	const float MaxMovementDelta = TraceGrabConstants::MaxMovementSpeed * DeltaSeconds;
+	const float MaxMovementSpeed = FMath::Max(TraceGrabConstants::MaxMovementSpeed, PlayerCharacter->GetVelocity().Length());
+	const float MaxMovementDelta = MaxMovementSpeed * DeltaSeconds;
 	const FVector MovementDelta = ToDesiredLocation.GetClampedToMaxSize(MaxMovementDelta);
 
 	// calculate new desired rotation for grabbed object

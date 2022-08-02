@@ -34,9 +34,6 @@ protected:
 
 private:
 
-	UPROPERTY(Transient)
-	TObjectPtr<AStarlightCharacter> PlayerCharacter;
-
 	/** Portals between trace device and grabbed object */
 	UPROPERTY()
 	TArray<TWeakObjectPtr<APortal>> HeldThroughPortals;

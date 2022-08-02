@@ -7,12 +7,14 @@
 #include "Portal/Teleportable.h"
 #include "StarlightCharacter.generated.h"
 
+class IGrabbable;
 enum class EPortalType : uint8;
 class UPortalComponent;
 class UTeleportComponent;
 class UCapsuleComponent;
 class UMotionControllerComponent;
 class UCameraComponent;
+class USphereComponent;
 class UGrabDevice;
 
 
@@ -55,6 +57,9 @@ public:
 
 	virtual void Tick(float DeltaSeconds) override;
 
+	void OnObjectGrabbed(TObjectPtr<IGrabbable> Grabbable);
+	void OnObjectReleased(TObjectPtr<IGrabbable> Grabbable);
+	
 	// Teleportable interface begin
 
 	virtual void Teleport(TObjectPtr<APortal> SourcePortal, TObjectPtr<APortal> TargetPortal) override;
@@ -93,6 +98,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Portal")
 	TObjectPtr<UPortalComponent> PortalComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Collision")
+	TObjectPtr<USphereComponent> HeldObjectCollisionComponent;
+	
 	/** Yaw change in degrees whenever snap turn is performed */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement")
 	float SnapTurnDegrees = 45.f;
