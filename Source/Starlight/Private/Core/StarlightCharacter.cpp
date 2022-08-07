@@ -10,6 +10,7 @@
 #include "Grab/Grabbable.h"
 #include "Grab/MotionControllerGrabDevice.h"
 #include "Grab/TraceGrabDevice.h"
+#include "Movement/StarlightCharacterMovementComponent.h"
 #include "Movement/TeleportComponent.h"
 #include "Portal/Portal.h"
 #include "Portal/PortalConstants.h"
@@ -24,7 +25,8 @@ namespace Constants
 }
 
 
-AStarlightCharacter::AStarlightCharacter()
+AStarlightCharacter::AStarlightCharacter(const FObjectInitializer& ObjectInitializer) :
+	Super(ObjectInitializer.SetDefaultSubobjectClass(CharacterMovementComponentName, UStarlightCharacterMovementComponent::StaticClass()))
 {
 	CameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("CameraComponent"));
 	CameraComponent->bLockToHmd = true;
@@ -99,8 +101,6 @@ void AStarlightCharacter::BeginPlay()
 		TraceGrabDevice->Initialize(CameraComponent);
 		GrabDevices.Add(EControllerHand::Special_1, TraceGrabDevice);
 	}
-
-	OnCharacterMovementUpdated.AddDynamic(this, &AStarlightCharacter::OnMovement);
 }
 
 void AStarlightCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -165,8 +165,15 @@ void AStarlightCharacter::SetTeleportVelocity(const FVector& LinearVelocity, con
 	GetCharacterMovement()->Velocity = LinearVelocity;
 }
 
+FVector AStarlightCharacter::GetTeleportableObjectLocation() const
+{
+	return CameraComponent->GetComponentLocation();
+}
+
 void AStarlightCharacter::OnTeleportableMoved()
 {
+	// we want component transforms to be updated without updating the overlaps
+	UpdateComponentTransforms();
 	for (APortal* Portal : OverlappingPortals)
 	{
 		Portal->OnActorMoved(this);
@@ -333,11 +340,6 @@ void AStarlightCharacter::ShootPortal(EPortalType PortalType)
 	FRotator EyesRotation;
 	GetActorEyesViewPoint(EyesLocation, EyesRotation);
 	PortalComponent->ShootPortal(PortalType, EyesLocation, EyesRotation.Vector());
-}
-
-void AStarlightCharacter::OnMovement(float DeltaSeconds, FVector OldLocation, FVector OldVelocity)
-{
-	OnTeleportableMoved();
 }
 
 void AStarlightCharacter::IntepolateRotation(const float DeltaSeconds)

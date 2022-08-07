@@ -140,6 +140,11 @@ TObjectPtr<UPrimitiveComponent> ITeleportable::GetCollisionComponent() const
 	return nullptr;
 }
 
+FVector ITeleportable::GetTeleportableObjectLocation() const 
+{
+	return CastToTeleportableActor()->GetActorLocation();
+}
+
 void ITeleportable::GetTeleportVelocity(FVector& LinearVelocity, FVector& AngularVelocity) const
 {
 }

@@ -35,7 +35,7 @@ class STARLIGHT_API AStarlightCharacter : public ACharacter, public ITeleportabl
 	GENERATED_BODY()
 
 public:
-	AStarlightCharacter();
+	AStarlightCharacter(const FObjectInitializer& ObjectInitializer);
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
@@ -72,6 +72,8 @@ public:
 	virtual void GetTeleportVelocity(FVector& LinearVelocity, FVector& AngularVelocity) const override;
 	virtual void SetTeleportVelocity(const FVector& LinearVelocity, const FVector& AngularVelocity) override;
 
+	virtual FVector GetTeleportableObjectLocation() const override;
+	
 	virtual void OnTeleportableMoved() override;
 
 	virtual TSubclassOf<ATeleportableCopy> GetPortalCopyClass() const override;
@@ -137,9 +139,6 @@ private:
 	void ReleaseGrab(EControllerHand Hand);
 
 	void ShootPortal(EPortalType PortalType);
-
-	UFUNCTION()
-	void OnMovement(float DeltaSeconds, FVector OldLocation, FVector OldVelocity);
 
 	void IntepolateRotation(const float DeltaSeconds);
 };

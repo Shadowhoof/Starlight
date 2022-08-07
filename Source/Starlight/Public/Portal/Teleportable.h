@@ -56,6 +56,8 @@ public:
 	virtual TSubclassOf<ATeleportableCopy> GetPortalCopyClass() const;
 	
 	virtual TObjectPtr<UPrimitiveComponent> GetCollisionComponent() const;
+
+	virtual FVector GetTeleportableObjectLocation() const;
 	
 	virtual void GetTeleportVelocity(FVector& LinearVelocity, FVector& AngularVelocity) const;
 	virtual void SetTeleportVelocity(const FVector& LinearVelocity, const FVector& AngularVelocity);

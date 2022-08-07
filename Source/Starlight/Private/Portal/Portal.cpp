@@ -392,9 +392,7 @@ void APortal::TeleportActor(TObjectPtr<ITeleportable> TeleportingActor)
 
 bool APortal::ShouldTeleportActor(TObjectPtr<ITeleportable> TeleportingActor, const FVector PortalNormal) const
 {
-	const FVector ToActorDirection = (TeleportingActor->CastToTeleportableActor()->GetActorLocation() -
-			GetActorLocation()).
-		GetSafeNormal();
+	const FVector ToActorDirection = (TeleportingActor->GetTeleportableObjectLocation() - GetActorLocation()).GetSafeNormal();
 	return ToActorDirection.Dot(PortalNormal) < 0.f;
 }
 
